@@ -1,463 +1,2334 @@
 <!DOCTYPE html>
-<html lang="vi" class="h-full bg-slate-950 text-slate-100">
+<html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GEO BIG DATA PLATFORM - WebGIS Viễn Thám</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>GEO BIG DATA PLATFORM - WebGIS LST · NDVI · TVDI TP.HCM</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='white' stroke-width='2.5'/%3E%3Cpath d='M7 16h18M16 7c4 4 4 14 0 18M16 7c-4 4-4 14 0 18' stroke='white' stroke-width='1.6' fill='none'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(51, 65, 85, 0.6); }
+        :root {
+            --bg: #eef3f9;
+            --panel: #ffffff;
+            --panel-2: #f8fafc;
+            --line: #e2e8f0;
+            --line-2: #cbd5e1;
+            --text: #0f172a;
+            --text-2: #334155;
+            --muted: #64748b;
+            --accent: #2563eb;
+            --accent-2: #4f46e5;
+            --accent-soft: #eff6ff;
+            --ok: #059669;
+            --warn: #d97706;
+            --bad: #dc2626;
+            --radius: 14px;
+            --shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 28px rgba(15, 23, 42, .07);
+            --ease: cubic-bezier(.2, .8, .2, 1);
+        }
+
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            margin: 0;
+            font-family: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-size: 13px;
+            color: var(--text);
+            background: radial-gradient(1200px 600px at 10% -10%, #dbeafe 0%, transparent 60%),
+                radial-gradient(900px 500px at 110% 10%, #e0e7ff 0%, transparent 55%), var(--bg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        button, input, select, textarea { font: inherit; color: inherit; }
+        button { cursor: pointer; }
+        [hidden] { display: none !important; }
+        .mono { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-variant-numeric: tabular-nums; }
+        .scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
+        .scroll::-webkit-scrollbar-track { background: transparent; }
+
+        /* ---------- PHÂN QUYỀN ---------- */
+        body:not([data-role="admin"]) .admin-only { display: none !important; }
+
+        /* ---------- HEADER ---------- */
+        .topbar {
+            height: 58px; flex-shrink: 0; display: flex; align-items: center; gap: 16px; padding: 0 16px;
+            background: rgba(255, 255, 255, .82); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); z-index: 30;
+        }
+        .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .brand-logo {
+            width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; color: #fff; font-size: 18px;
+            background: linear-gradient(135deg, #2563eb, #7c3aed); box-shadow: 0 6px 16px rgba(37, 99, 235, .35); flex-shrink: 0;
+        }
+        .brand h1 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: .3px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+        .brand h1 .ver { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); border: 1px solid #bfdbfe; }
+        .brand p { margin: 1px 0 0; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .seg { display: inline-flex; background: #f1f5f9; border: 1px solid var(--line); border-radius: 12px; padding: 3px; gap: 2px; position: relative; }
+        .seg button {
+            border: 0; background: transparent; padding: 6px 12px; border-radius: 9px; font-weight: 600; font-size: 12px; color: var(--text-2);
+            display: inline-flex; align-items: center; gap: 6px; transition: background .25s var(--ease), color .25s, box-shadow .25s; white-space: nowrap;
+        }
+        .seg button:hover { color: var(--text); }
+        .seg button.on { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(15, 23, 42, .12); }
+        .seg.idx button { padding: 7px 14px; font-size: 13px; }
+        .seg.idx button i { transition: transform .35s var(--ease); }
+        .seg.idx button.on i { transform: scale(1.18); }
+        .seg.idx button[data-idx="LST"].on { color: #dc2626; }
+        .seg.idx button[data-idx="NDVI"].on { color: #16a34a; }
+        .seg.idx button[data-idx="TVDI"].on { color: #d97706; }
+        .seg.sm button { padding: 4px 9px; font-size: 11.5px; }
+
+        .top-center { flex: 1; display: flex; justify-content: center; gap: 10px; min-width: 0; }
+        .top-right { display: flex; align-items: center; gap: 10px; }
+        .sel {
+            background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font-size: 12px; font-weight: 500;
+            outline: none; transition: border-color .2s, box-shadow .2s;
+        }
+        .sel:focus { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59, 130, 246, .15); }
+        .user-chip {
+            display: flex; align-items: center; gap: 8px; padding: 4px 6px 4px 4px; border-radius: 999px; background: #fff; border: 1px solid var(--line);
+            position: relative;
+        }
+        .avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 12px; background: linear-gradient(135deg, #0ea5e9, #2563eb); }
+        body[data-role="admin"] .avatar { background: linear-gradient(135deg, #f97316, #db2777); }
+        .user-chip .who { line-height: 1.15; }
+        .user-chip .who b { font-size: 12px; display: block; }
+        .role-badge { font-size: 10px; font-weight: 700; color: var(--accent); }
+        body[data-role="admin"] .role-badge { color: #db2777; }
+        .icon-btn {
+            width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--line); background: #fff; display: inline-grid; place-items: center;
+            color: var(--text-2); transition: all .2s var(--ease);
+        }
+        .icon-btn:hover { background: var(--accent-soft); color: var(--accent); border-color: #bfdbfe; transform: translateY(-1px); }
+        .clock { font-size: 11px; color: var(--muted); padding-left: 10px; border-left: 1px solid var(--line); }
+
+        /* ---------- LAYOUT ---------- */
+        .layout {
+            flex: 1; min-height: 0; display: grid; grid-template-columns: 350px minmax(0, 1fr) 340px; gap: 12px; padding: 12px;
+            transition: grid-template-columns .45s var(--ease);
+        }
+        .layout.no-right { grid-template-columns: 350px minmax(0, 1fr) 0px; }
+        .layout.no-left { grid-template-columns: 0px minmax(0, 1fr) 340px; }
+        .layout.no-left.no-right { grid-template-columns: 0px minmax(0, 1fr) 0px; }
+        .layout.no-right .panel.right, .layout.no-left .panel.left { opacity: 0; pointer-events: none; }
+        .panel { min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; transition: opacity .3s; overflow: hidden; }
+        .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+        .card-h {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line);
+            font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-2);
+        }
+        .card-h i.lead { color: var(--accent); margin-right: 6px; }
+        .card-b { padding: 10px 12px; }
+        details.card > summary { list-style: none; cursor: pointer; }
+        details.card > summary::-webkit-details-marker { display: none; }
+        details.card > summary .chev { transition: transform .3s var(--ease); color: var(--muted); }
+        details.card[open] > summary .chev { transform: rotate(180deg); }
+        details.card:not([open]) > summary { border-bottom: 0; }
+
+        .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .lbl { font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; display: block; }
+        .sel.w { width: 100%; }
+
+        /* Ngưỡng */
+        .thr { display: grid; grid-template-columns: auto 52px 46px 1fr auto; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); transition: all .25s var(--ease); }
+        .thr + .thr { margin-top: 6px; }
+        .thr.on { background: #fff; border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59, 130, 246, .08); }
+        .thr .tag { font-weight: 800; font-size: 11.5px; }
+        .thr input[type=number] { width: 100%; padding: 4px 6px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font-size: 12px; }
+        .thr select { padding: 3px 2px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font-weight: 700; }
+        .thr input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); height: 14px; margin: 2px 0 0; }
+        .thr .unit { font-size: 11px; color: var(--muted); }
+        .tag.LST { color: #dc2626; } .tag.NDVI { color: #16a34a; } .tag.TVDI { color: #d97706; }
+        .switch { position: relative; width: 30px; height: 17px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .switch span { position: absolute; inset: 0; background: #cbd5e1; border-radius: 999px; transition: .25s; cursor: pointer; }
+        .switch span::after { content: ''; position: absolute; width: 13px; height: 13px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: .25s var(--ease); box-shadow: 0 1px 2px rgba(0, 0, 0, .2); }
+        .switch input:checked + span { background: var(--accent); }
+        .switch input:checked + span::after { transform: translateX(13px); }
+        .presets { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+        .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 600; color: var(--text-2); transition: all .2s; }
+        .chip:hover { border-color: #93c5fd; color: var(--accent); background: var(--accent-soft); }
+        .result-chip { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: linear-gradient(135deg, #eff6ff, #eef2ff); border: 1px solid #c7d2fe; font-size: 12px; color: #3730a3; }
+        .result-chip b { font-size: 15px; }
+
+        /* Xếp hạng */
+        .rank { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+        .rank-tools { display: flex; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--line); align-items: center; }
+        .search { flex: 1; position: relative; }
+        .search input { width: 100%; padding: 6px 10px 6px 28px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); font-size: 12px; outline: none; }
+        .search input:focus { border-color: #93c5fd; background: #fff; }
+        .search i { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 11px; }
+        .rank-head, .rank-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) 54px 54px 54px; align-items: center; gap: 4px; padding: 0 10px; }
+        .rank-head { font-size: 10.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; height: 30px; border-bottom: 1px solid var(--line); background: var(--panel-2); }
+        .rank-head button { border: 0; background: transparent; font-weight: 800; font-size: 10.5px; padding: 3px 0; border-radius: 6px; color: var(--muted); text-align: center; }
+        .rank-head button.on { color: var(--accent); background: var(--accent-soft); }
+        .rank-list { flex: 1; overflow-y: auto; position: relative; }
+        .rank-row { height: 38px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background .15s, opacity .3s; position: relative; }
+        .rank-row:hover { background: #f8fafc; }
+        .rank-row.sel { background: #fffbeb; box-shadow: inset 3px 0 0 #f59e0b; }
+        .rank-row.match { box-shadow: inset 3px 0 0 var(--accent); }
+        .rank-row.sel.match { box-shadow: inset 3px 0 0 #f59e0b; }
+        .rank-row.dim { opacity: .38; }
+        .rank-row .rk { font-weight: 800; font-size: 12px; color: var(--muted); text-align: center; }
+        .rank-row .rk.top { color: #fff; background: linear-gradient(135deg, #f97316, #dc2626); border-radius: 7px; height: 22px; line-height: 22px; }
+        .rank-row .nm { min-width: 0; line-height: 1.2; }
+        .rank-row .nm b { display: block; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rank-row .nm small { font-size: 10px; color: var(--muted); }
+        .rank-row .c { font-size: 11.5px; text-align: center; border-radius: 6px; padding: 3px 0; font-weight: 600; }
+        .rank-row .c.on { font-weight: 800; outline: 1.5px solid rgba(15, 23, 42, .25); }
+        .rank-foot { padding: 8px 10px; border-top: 1px solid var(--line); display: flex; gap: 6px; }
+        .btn {
+            border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 6px 10px; font-size: 12px; font-weight: 600; color: var(--text-2);
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all .2s var(--ease);
+        }
+        .btn:hover { border-color: #93c5fd; color: var(--accent); background: var(--accent-soft); }
+        .btn.primary { background: linear-gradient(135deg, #2563eb, #4f46e5); color: #fff; border-color: transparent; box-shadow: 0 4px 14px rgba(37, 99, 235, .3); }
+        .btn.primary:hover { filter: brightness(1.08); transform: translateY(-1px); color: #fff; }
+        .btn.danger { color: var(--bad); }
+        .btn.danger:hover { background: #fef2f2; border-color: #fecaca; }
+        .btn[disabled] { opacity: .5; pointer-events: none; }
+        .flex1 { flex: 1; }
+
+        /* ---------- MAP ---------- */
+        .panel.left { grid-column: 1; grid-row: 1; }
+        .panel.right { grid-column: 3; grid-row: 1; }
+        .mapcard { grid-column: 2; grid-row: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .mapwrap { flex: 1; min-height: 0; position: relative; }
+        #map { position: absolute; inset: 0; background: #e8eef5; }
+        .maplibregl-ctrl-attrib { font-size: 10px; }
+
+        /* Khung bản đồ (neatline) + toạ độ */
+        #frame { position: absolute; inset: 0; pointer-events: none; z-index: 2; transition: opacity .5s; }
+        #frame::before { content: ''; position: absolute; inset: 0; border: 2px solid #1e293b; border-radius: 0 0 0 0; }
+        #frame::after { content: ''; position: absolute; inset: 18px; border: 1px solid rgba(30, 41, 59, .55); }
+        #frame .tk { position: absolute; font-size: 9.5px; font-weight: 600; color: #1e293b; background: rgba(255, 255, 255, .85); padding: 0 3px; border-radius: 3px; white-space: nowrap; font-family: ui-monospace, Consolas, monospace; }
+        #frame .tk.t { top: 3px; transform: translateX(-50%); }
+        #frame .tk.b { bottom: 3px; transform: translateX(-50%); }
+        #frame .tk.l { left: 1px; transform: translateY(-50%) rotate(-90deg); transform-origin: center; }
+        #frame .tk.r { right: 1px; transform: translateY(-50%) rotate(90deg); }
+        #frame .tick { position: absolute; background: #1e293b; }
+        .is3d #frame { opacity: 0; }
+
+        .map-title {
+            position: absolute; top: 26px; left: 0; right: 0; margin-inline: auto; width: fit-content; z-index: 4; text-align: center; padding: 8px 18px; border-radius: 12px;
+            background: rgba(255, 255, 255, .9); backdrop-filter: blur(8px); border: 1px solid var(--line); box-shadow: var(--shadow); max-width: calc(100% - 200px);
+        }
+        .map-title h2 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: .4px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .map-title p { margin: 2px 0 0; font-size: 11.5px; color: var(--muted); font-weight: 500; }
+        .map-title p b { color: var(--accent); }
+        .swap-anim { animation: swapIn .55s var(--ease); }
+        @keyframes swapIn { from { opacity: 0; transform: translateY(-6px); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+
+        .north { position: absolute; top: 26px; right: 26px; z-index: 4; width: 58px; height: 74px; display: grid; place-items: center; background: rgba(255, 255, 255, .9); border-radius: 12px; border: 1px solid var(--line); box-shadow: var(--shadow); cursor: pointer; }
+        .north svg { transition: transform .25s linear; }
+
+        .map-tools { position: absolute; top: 110px; right: 26px; z-index: 4; display: flex; flex-direction: column; gap: 6px; }
+        .map-tools .icon-btn { width: 36px; height: 36px; box-shadow: var(--shadow); }
+        .map-tools .icon-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+        .legend {
+            position: absolute; left: 26px; bottom: 26px; z-index: 4; width: 290px; padding: 10px 12px 9px; border-radius: 12px;
+            background: rgba(255, 255, 255, .93); backdrop-filter: blur(8px); border: 1px solid var(--line); box-shadow: var(--shadow);
+        }
+        .legend .lt { display: flex; justify-content: space-between; align-items: baseline; font-size: 11.5px; font-weight: 800; margin-bottom: 7px; }
+        .legend .lt span { font-size: 10px; color: var(--muted); font-weight: 600; }
+        .legend .bar-wrap { position: relative; padding-top: 12px; }
+        .legend .bar { height: 14px; border-radius: 4px; border: 1px solid rgba(15, 23, 42, .25); transition: background .5s; }
+        .legend .ticks { position: relative; height: 16px; margin-top: 2px; }
+        .legend .ticks span { position: absolute; transform: translateX(-50%); font-size: 10px; font-weight: 700; color: var(--text-2); font-family: ui-monospace, Consolas, monospace; }
+        .legend .ticks span::before { content: ''; position: absolute; left: 50%; top: -3px; width: 1px; height: 3px; background: #475569; }
+        .legend .marker { position: absolute; top: -2px; transform: translateX(-50%); transition: left .18s var(--ease), opacity .2s; opacity: 0; display: flex; flex-direction: column; align-items: center; }
+        .legend .marker b { font-size: 10px; background: #0f172a; color: #fff; padding: 1px 6px; border-radius: 5px; white-space: nowrap; font-family: ui-monospace, Consolas, monospace; margin-top: -14px; }
+        .legend .marker i { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #0f172a; }
+        .legend .ends { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); font-weight: 600; }
+        .legend .extra { display: flex; gap: 12px; margin-top: 6px; font-size: 10.5px; color: var(--text-2); flex-wrap: wrap; }
+        .legend .extra span { display: inline-flex; align-items: center; gap: 5px; }
+        .legend .sw { width: 14px; height: 10px; border-radius: 2px; border: 1px solid rgba(15, 23, 42, .25); display: inline-block; }
+
+        .readout {
+            position: absolute; right: 26px; bottom: 26px; z-index: 4; padding: 6px 10px; border-radius: 10px; background: rgba(255, 255, 255, .93); border: 1px solid var(--line);
+            box-shadow: var(--shadow); font-size: 11px; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 210px;
+        }
+        .readout .xy { color: var(--text-2); }
+        .readout .pv { font-weight: 800; font-size: 12px; }
+        .maplibregl-ctrl-bottom-right { bottom: 86px !important; right: 18px !important; }
+        .maplibregl-ctrl-scale { border-color: #1e293b; color: #0f172a; font-weight: 700; background: rgba(255, 255, 255, .85); }
+
+        .tip {
+            position: absolute; z-index: 6; pointer-events: none; min-width: 210px; padding: 9px 11px; border-radius: 11px; background: rgba(15, 23, 42, .92);
+            color: #fff; font-size: 11.5px; box-shadow: 0 10px 30px rgba(0, 0, 0, .25); transform: translate(14px, 14px); transition: opacity .15s;
+        }
+        .tip h4 { margin: 0 0 5px; font-size: 13px; }
+        .tip .r { display: flex; justify-content: space-between; gap: 12px; padding: 1.5px 0; }
+        .tip .r span:first-child { color: #94a3b8; }
+        .tip .cls { display: inline-block; margin-top: 4px; font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: rgba(255, 255, 255, .14); }
+
+        .busy { position: absolute; top: 90px; left: 50%; transform: translateX(-50%); z-index: 5; padding: 6px 14px; border-radius: 999px; background: #0f172a; color: #fff; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: var(--shadow); }
+        .edge-btn { position: absolute; top: 50%; z-index: 5; width: 20px; height: 54px; border: 1px solid var(--line); background: #fff; color: var(--muted); display: grid; place-items: center; box-shadow: var(--shadow); transform: translateY(-50%); }
+        .edge-btn.l { left: 0; border-radius: 0 9px 9px 0; border-left: 0; }
+        .edge-btn.r { right: 0; border-radius: 9px 0 0 9px; border-right: 0; }
+        .edge-btn:hover { color: var(--accent); }
+
+        /* Timeline */
+        .timeline { flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-top: 1px solid var(--line); background: #fff; }
+        .play {
+            width: 40px; height: 40px; border-radius: 50%; border: 0; color: #fff; font-size: 15px; display: grid; place-items: center;
+            background: linear-gradient(135deg, #2563eb, #7c3aed); box-shadow: 0 6px 16px rgba(79, 70, 229, .35); transition: transform .2s var(--ease);
+        }
+        .play:hover { transform: scale(1.08); }
+        .play.playing { animation: pulse 1.6s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, .45); } 70% { box-shadow: 0 0 0 12px rgba(79, 70, 229, 0); } 100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); } }
+        .tl-now { min-width: 112px; line-height: 1.1; }
+        .tl-now b { font-size: 18px; font-weight: 800; display: block; }
+        .tl-now small { font-size: 10.5px; color: var(--muted); }
+        .tl-track { flex: 1; min-width: 120px; position: relative; padding-top: 4px; }
+        .tl-track input { width: 100%; accent-color: var(--accent-2); }
+        .tl-years { position: relative; height: 14px; font-size: 9.5px; color: var(--muted); font-weight: 600; }
+        .tl-years span { position: absolute; transform: translateX(-50%); }
+
+        /* ---------- PANEL PHẢI ---------- */
+        .tabs { display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); }
+        .tabs button { flex: 1; border: 0; background: transparent; padding: 7px 6px; border-radius: 9px; font-weight: 700; font-size: 12px; color: var(--muted); transition: all .2s; }
+        .tabs button.on { background: var(--accent-soft); color: var(--accent); }
+        .right .card { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+        .tab-body { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; }
+        .tab-body.anim > * { animation: fadeUp .45s var(--ease) both; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        .ward-h { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+        .ward-h .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(135deg, #fef3c7, #fde68a); color: #b45309; font-size: 17px; flex-shrink: 0; }
+        .ward-h h3 { margin: 0; font-size: 16px; font-weight: 800; }
+        .ward-h p { margin: 2px 0 0; color: var(--muted); font-size: 11.5px; }
+        .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 10px; }
+        .kpi { border: 1px solid var(--line); border-radius: 11px; padding: 8px; background: var(--panel-2); position: relative; overflow: hidden; cursor: pointer; transition: all .2s; }
+        .kpi:hover { border-color: #93c5fd; }
+        .kpi.on { background: #fff; border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59, 130, 246, .1); }
+        .kpi .k { font-size: 10.5px; font-weight: 800; }
+        .kpi .v { font-size: 16px; font-weight: 800; margin: 2px 0; }
+        .kpi .s { font-size: 10px; color: var(--muted); }
+        .kpi .bar { position: absolute; left: 0; bottom: 0; height: 3px; }
+        .info-t { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 8px; }
+        .info-t td { padding: 5px 2px; border-bottom: 1px dashed var(--line); vertical-align: top; }
+        .info-t td:first-child { color: var(--muted); width: 38%; }
+        .chart-box { position: relative; height: 190px; margin-top: 4px; }
+        .sub-h { font-size: 11px; font-weight: 800; color: var(--text-2); text-transform: uppercase; letter-spacing: .4px; margin: 12px 0 6px; display: flex; justify-content: space-between; align-items: center; }
+        .sub-h span { font-weight: 600; text-transform: none; color: var(--muted); letter-spacing: 0; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+        .stat { border: 1px solid var(--line); border-radius: 11px; padding: 8px 10px; background: var(--panel-2); }
+        .stat .k { font-size: 10.5px; color: var(--muted); font-weight: 600; }
+        .stat .v { font-size: 17px; font-weight: 800; }
+        .stat .n { font-size: 10.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
+        .empty i { font-size: 30px; color: #cbd5e1; display: block; margin-bottom: 10px; }
+
+        /* ---------- SPLASH / LOGIN ---------- */
+        #splash {
+            position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
+            background: radial-gradient(900px 500px at 20% 10%, #dbeafe, transparent 60%), radial-gradient(800px 500px at 90% 90%, #ede9fe, transparent 60%), #f8fafc;
+            transition: opacity .8s var(--ease), transform .9s var(--ease), visibility .8s;
+        }
+        #splash.out { opacity: 0; transform: scale(1.06); visibility: hidden; }
+        .sp-inner { display: flex; flex-direction: column; align-items: center; gap: 18px; width: min(420px, 92vw); }
+        .orb { width: 110px; height: 110px; position: relative; }
+        .orb .core { position: absolute; inset: 22px; border-radius: 50%; background: conic-gradient(from 0deg, #0000ff, #00ffff, #00ff00, #ffff00, #ff6600, #ff0000, #0000ff); filter: saturate(.85); animation: spin 6s linear infinite; box-shadow: 0 10px 40px rgba(37, 99, 235, .35); }
+        .orb .core::after { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: #fff; display: block; }
+        .orb .ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent; border-top-color: #2563eb; border-right-color: #7c3aed; animation: spin 1.4s linear infinite; }
+        .orb .ring.b { inset: 10px; border-top-color: #f97316; border-right-color: transparent; border-left-color: #16a34a; animation-duration: 2.2s; animation-direction: reverse; }
+        .orb .gl { position: absolute; inset: 0; display: grid; place-items: center; font-size: 30px; color: #2563eb; z-index: 2; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .sp-title { text-align: center; }
+        .sp-title h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: 1px; color: #1d4ed8; }
+        .sp-title h1 span { display: inline-block; opacity: 0; transform: translateY(14px); animation: letter .6s var(--ease) forwards; }
+        @keyframes letter { to { opacity: 1; transform: none; } }
+        .sp-title p { margin: 6px 0 0; color: var(--muted); font-size: 12.5px; }
+        .prog { width: 100%; height: 6px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+        .prog i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #2563eb, #7c3aed, #db2777); transition: width .45s var(--ease); }
+        .prog-t { font-size: 11.5px; color: var(--muted); margin-top: -8px; }
+        .login {
+            width: 100%; padding: 20px; border-radius: 18px; background: rgba(255, 255, 255, .85); backdrop-filter: blur(12px); border: 1px solid var(--line);
+            box-shadow: 0 20px 60px rgba(15, 23, 42, .12); animation: fadeUp .6s var(--ease) both;
+        }
+        .login h3 { margin: 0 0 4px; font-size: 16px; }
+        .login p.s { margin: 0 0 14px; color: var(--muted); font-size: 12px; }
+        .login label { display: block; font-size: 11.5px; font-weight: 600; color: var(--text-2); margin: 8px 0 4px; }
+        .login input { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; outline: none; font-size: 13px; }
+        .login input:focus { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59, 130, 246, .15); }
+        .login .err { color: var(--bad); font-size: 12px; margin-top: 8px; min-height: 16px; }
+        .login .demo { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .login .demo button { text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 7px 9px; font-size: 11px; line-height: 1.3; transition: all .2s; }
+        .login .demo button:hover { border-color: #93c5fd; background: var(--accent-soft); }
+        .login .demo b { display: block; font-size: 12px; }
+        .shake { animation: shake .4s; }
+        @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+
+        /* Hiệu ứng vào màn hình */
+        .enter .topbar { animation: dropIn .7s var(--ease) both; }
+        .enter .panel.left > * { animation: slideL .7s var(--ease) both; }
+        .enter .panel.right > * { animation: slideR .7s var(--ease) both; }
+        .enter .panel > *:nth-child(2) { animation-delay: .12s; }
+        .enter .panel > *:nth-child(3) { animation-delay: .24s; }
+        .enter .mapcard { animation: zoomIn .9s var(--ease) both; }
+        .enter .map-title, .enter .legend, .enter .north, .enter .readout, .enter .map-tools { animation: fadeUp .8s var(--ease) both; animation-delay: .9s; }
+        @keyframes dropIn { from { transform: translateY(-100%); opacity: 0; } to { transform: none; opacity: 1; } }
+        @keyframes slideL { from { transform: translateX(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
+        @keyframes slideR { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+        @keyframes zoomIn { from { transform: scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+
+        /* ---------- MODAL QUẢN TRỊ ---------- */
+        .modal { position: fixed; inset: 0; z-index: 80; background: rgba(15, 23, 42, .35); backdrop-filter: blur(4px); display: grid; place-items: center; animation: fadeIn .25s both; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-box { width: min(980px, 94vw); height: min(680px, 90vh); display: grid; grid-template-columns: 210px 1fr; overflow: hidden; animation: popIn .4s var(--ease) both; }
+        @keyframes popIn { from { transform: translateY(16px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+        .modal-nav { background: var(--panel-2); border-right: 1px solid var(--line); padding: 14px 10px; display: flex; flex-direction: column; gap: 4px; }
+        .modal-nav h4 { margin: 0 6px 10px; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+        .modal-nav button { text-align: left; border: 0; background: transparent; padding: 9px 10px; border-radius: 9px; font-weight: 600; color: var(--text-2); display: flex; gap: 9px; align-items: center; }
+        .modal-nav button i { width: 16px; text-align: center; color: var(--muted); }
+        .modal-nav button.on { background: #fff; color: var(--accent); box-shadow: 0 1px 3px rgba(15, 23, 42, .1); }
+        .modal-nav button.on i { color: var(--accent); }
+        .modal-main { overflow-y: auto; padding: 18px 20px; position: relative; }
+        .modal-main h3 { margin: 0 0 4px; font-size: 17px; }
+        .modal-main p.d { margin: 0 0 14px; color: var(--muted); font-size: 12px; }
+        .modal-close { position: absolute; top: 12px; right: 12px; }
+        .box { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; background: #fff; }
+        .box h5 { margin: 0 0 8px; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+        .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .tbl th, .tbl td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+        .tbl th { font-size: 11px; color: var(--muted); text-transform: uppercase; background: var(--panel-2); }
+        .inp { width: 100%; padding: 7px 10px; border-radius: 9px; border: 1px solid var(--line); background: #fff; outline: none; font-size: 12.5px; }
+        .inp:focus { border-color: #93c5fd; }
+        textarea.inp { font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; resize: vertical; }
+        pre.log { background: #0f172a; color: #e2e8f0; padding: 10px; border-radius: 10px; font-size: 11px; max-height: 220px; overflow: auto; white-space: pre-wrap; margin: 8px 0 0; }
+        code.k { background: #f1f5f9; border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; font-size: 11.5px; }
+        .pal-prev { height: 14px; border-radius: 4px; border: 1px solid rgba(15, 23, 42, .2); margin-top: 6px; }
+        .badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+        .badge.admin { background: #fce7f3; color: #be185d; }
+        .badge.user { background: #dbeafe; color: #1d4ed8; }
+
+        /* Toast */
+        #toasts { position: fixed; right: 16px; bottom: 16px; z-index: 120; display: flex; flex-direction: column; gap: 8px; }
+        .toast { padding: 10px 14px; border-radius: 12px; background: #0f172a; color: #fff; font-size: 12.5px; box-shadow: 0 10px 30px rgba(0, 0, 0, .2); display: flex; gap: 9px; align-items: center; animation: toastIn .4s var(--ease) both; max-width: 380px; }
+        .toast.ok i { color: #34d399; } .toast.err i { color: #f87171; } .toast.info i { color: #60a5fa; }
+        .toast.out { animation: toastOut .35s var(--ease) forwards; }
+        @keyframes toastIn { from { transform: translateX(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+        @keyframes toastOut { to { transform: translateX(30px); opacity: 0; } }
+
+        /* ---------- RESPONSIVE ---------- */
+        @media (max-width: 1360px) {
+            .layout { grid-template-columns: 320px minmax(0, 1fr) 300px; }
+            .layout.no-right { grid-template-columns: 320px minmax(0, 1fr) 0px; }
+            .layout.no-left { grid-template-columns: 0px minmax(0, 1fr) 300px; }
+            .brand p, .clock { display: none; }
+        }
+        @media (max-width: 1100px) {
+            .layout, .layout.no-right, .layout.no-left { grid-template-columns: 300px minmax(0, 1fr) 0px; }
+            .panel.right { position: fixed; right: 12px; top: 70px; bottom: 12px; width: 320px; z-index: 40; transform: translateX(110%); transition: transform .45s var(--ease); opacity: 1 !important; pointer-events: auto !important; }
+            .layout.show-right .panel.right { transform: none; }
+            .brand h1 .ver { display: none; }
+            .top-center .seg.view, .top-center .seg.layer { display: none; }
+        }
+        @media (max-width: 780px) {
+            .layout, .layout.no-right, .layout.no-left { grid-template-columns: 0px minmax(0, 1fr) 0px; padding: 8px; gap: 0; }
+            .panel.left { position: fixed; left: 8px; top: 66px; bottom: 8px; width: min(340px, 92vw); z-index: 40; transform: translateX(-110%); transition: transform .45s var(--ease); opacity: 1 !important; pointer-events: auto !important; }
+            .layout.show-left .panel.left { transform: none; }
+            .topbar { gap: 8px; padding: 0 8px; }
+            .brand > div:last-child { display: none; }
+            .brand-logo { width: 32px; height: 32px; }
+            .user-chip .who, .top-right .sel { display: none; }
+            .map-title { max-width: calc(100% - 110px); top: 24px; padding: 6px 10px; }
+            .map-title h2 { font-size: 12px; }
+            .legend { width: 220px; left: 22px; bottom: 22px; }
+            .readout { display: none; }
+            .north { width: 46px; height: 58px; right: 22px; top: 24px; }
+            .map-tools { top: 90px; right: 22px; }
+            .timeline { flex-wrap: wrap; gap: 8px; }
+            .tl-track { order: 5; flex-basis: 100%; }
+            .seg.idx button { padding: 6px 9px; font-size: 12px; }
+            .seg.idx button span { display: none; }
+        }
     </style>
 </head>
-<body class="h-full font-sans antialiased flex flex-col overflow-hidden select-none">
 
-    <!-- HEADER -->
-    <header class="h-14 bg-slate-900/90 border-b border-slate-800 px-4 flex items-center justify-between z-30 shrink-0">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-lg bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold text-lg">
-                <i class="fa-solid fa-earth-americas"></i>
+<body>
+
+    <!-- ===================== MÀN HÌNH KHỞI ĐỘNG + ĐĂNG NHẬP ===================== -->
+    <div id="splash">
+        <div class="sp-inner">
+            <div class="orb">
+                <div class="core"></div>
+                <div class="ring"></div>
+                <div class="ring b"></div>
+                <div class="gl"><i class="fa-solid fa-earth-asia"></i></div>
             </div>
+            <div class="sp-title">
+                <h1 id="spTitle">GEO BIG DATA PLATFORM</h1>
+                <p>WebGIS giám sát Nhiệt độ bề mặt · Thực vật · Khô hạn — TP. Hồ Chí Minh</p>
+            </div>
+            <div class="prog" id="progBar"><i id="progFill"></i></div>
+            <div class="prog-t" id="progText">Đang khởi động hệ thống…</div>
+
+            <form class="login" id="loginCard" hidden autocomplete="on">
+                <h3><i class="fa-solid fa-lock" style="color:var(--accent)"></i> Đăng nhập hệ thống</h3>
+                <p class="s">Quản trị viên có toàn quyền; người dùng thường chỉ được xem và thống kê.</p>
+                <label for="lgUser">Tên đăng nhập</label>
+                <input id="lgUser" autocomplete="username" required>
+                <label for="lgPass">Mật khẩu</label>
+                <input id="lgPass" type="password" autocomplete="current-password" required>
+                <div class="err" id="lgErr"></div>
+                <button class="btn primary" style="width:100%;padding:10px;margin-top:4px" type="submit"><i class="fa-solid fa-right-to-bracket"></i> Đăng nhập</button>
+                <div class="demo" style="grid-template-columns:1fr">
+                    <button type="button" data-u="nguoidung" data-p="123456"><b><i class="fa-solid fa-user" style="color:#2563eb"></i> Vào xem với tài khoản người dùng</b>nguoidung / 123456 (chỉ xem &amp; thống kê)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===================== HEADER ===================== -->
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-logo"><i class="fa-solid fa-earth-asia"></i></div>
             <div>
-                <h1 class="text-base font-bold tracking-wide text-white flex items-center gap-2">
-                    GEO BIG DATA PLATFORM 
-                    <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30">v2.4 PRO</span>
-                </h1>
-                <p class="text-xs text-slate-400">Hệ thống lưu trữ & truy vấn ảnh viễn thám • Nhóm TK13</p>
+                <h1>GEO BIG DATA PLATFORM <span class="ver">v3.0 · LST/NDVI/TVDI</span></h1>
+                <p>Hệ thống giám sát nhiệt độ – thực vật – khô hạn 167 phường/xã TP.HCM • Nhóm TK13</p>
             </div>
         </div>
 
-        <div class="flex items-center gap-4 text-xs">
-            <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-slate-300 font-medium">Object Storage: <span class="text-emerald-400">Online</span></span>
+        <div class="top-center">
+            <div class="seg idx" id="idxSeg">
+                <button data-idx="LST" class="on"><i class="fa-solid fa-temperature-high"></i><span>LST</span></button>
+                <button data-idx="NDVI"><i class="fa-solid fa-leaf"></i><span>NDVI</span></button>
+                <button data-idx="TVDI"><i class="fa-solid fa-droplet"></i><span>TVDI</span></button>
             </div>
-            <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
-                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                <span class="text-slate-300 font-medium">PostgreSQL/PostGIS: <span class="text-blue-400">Sẵn sàng</span></span>
+            <div class="seg view" id="viewSeg">
+                <button data-view="2D" class="on"><i class="fa-regular fa-map"></i> 2D</button>
+                <button data-view="3D"><i class="fa-solid fa-cube"></i> 3D</button>
             </div>
-            <div class="text-slate-400 pl-2 border-l border-slate-800" id="liveClock">00:00:00</div>
+            <div class="seg layer" id="layerSeg">
+                <button data-layer="ward" class="on" title="Tô màu theo giá trị trung bình phường/xã"><i class="fa-solid fa-draw-polygon"></i> Phường</button>
+                <button data-layer="pixel" title="Ảnh pixel ~120 m"><i class="fa-solid fa-border-all"></i> Pixel</button>
+            </div>
+        </div>
+
+        <div class="top-right">
+            <select class="sel" id="baseSel" title="Bản đồ nền">
+                <option value="light">Nền sáng</option>
+                <option value="street">Nền đường phố</option>
+                <option value="sat">Ảnh vệ tinh</option>
+                <option value="topo">Nền địa hình</option>
+            </select>
+            <button class="icon-btn admin-only" id="btnAdmin" title="Bảng quản trị"><i class="fa-solid fa-gear"></i></button>
+            <div class="user-chip">
+                <div class="avatar" id="avatar">?</div>
+                <div class="who"><b id="whoName">—</b><span class="role-badge" id="whoRole">—</span></div>
+                <button class="icon-btn" id="btnLogout" title="Đăng xuất" style="width:28px;height:28px"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
+            <div class="clock mono" id="liveClock">00:00:00</div>
         </div>
     </header>
 
-    <!-- MAIN BODY -->
-    <div class="flex-1 grid grid-cols-12 gap-3 p-3 min-h-0">
-        
-        <!-- SIDEBAR TRUY VẤN -->
-        <aside class="col-span-3 flex flex-col gap-3 min-h-0 glass-panel rounded-xl p-3.5 custom-scrollbar overflow-y-auto z-20">
-            <div class="flex items-center gap-2 text-blue-400 font-bold text-xs uppercase tracking-wider pb-2 border-b border-slate-800">
-                <i class="fa-solid fa-sliders"></i> Bộ Lọc Truy Vấn Không Gian
-            </div>
+    <!-- ===================== THÂN TRANG ===================== -->
+    <main class="layout" id="layout">
 
-            <div class="space-y-1">
-                <label class="text-xs font-semibold text-slate-300">Vùng không gian (Spatial Bound)</label>
-                <select id="locationSelect" class="w-full bg-slate-800/90 border border-slate-700 text-slate-200 text-xs rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    <option value="q1">Quận 1, TP. Hồ Chí Minh</option>
-                    <option value="thuduc">TP. Thủ Đức, TP. HCM</option>
-                    <option value="q7">Quận 7, TP. Hồ Chí Minh</option>
-                    <option value="cuchi">Huyện Củ Chi, TP. HCM</option>
-                </select>
-            </div>
-
-            <div class="space-y-1">
-                <label class="text-xs font-semibold text-slate-300">Khoảng thời gian (Time Series)</label>
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="date" id="startDate" value="2017-01-01" class="bg-slate-800/90 border border-slate-700 text-slate-200 text-xs rounded-lg p-2 focus:ring-1 focus:ring-blue-500">
-                    <input type="date" id="endDate" value="2026-12-31" class="bg-slate-800/90 border border-slate-700 text-slate-200 text-xs rounded-lg p-2 focus:ring-1 focus:ring-blue-500">
+        <!-- PANEL TRÁI: thời gian, ngưỡng, xếp hạng -->
+        <aside class="panel left" id="leftPanel">
+            <details class="card" open id="secTime">
+                <summary class="card-h"><span><i class="fa-regular fa-calendar lead"></i>Khoảng thời gian</span><i class="fa-solid fa-chevron-down chev"></i></summary>
+                <div class="card-b">
+                    <div class="field-row">
+                        <div><span class="lbl">Từ tháng</span><select class="sel w" id="fromSel"></select></div>
+                        <div><span class="lbl">Đến tháng</span><select class="sel w" id="toSel"></select></div>
+                    </div>
+                    <div style="margin-top:8px">
+                        <span class="lbl">Cách tổng hợp giá trị</span>
+                        <div class="seg sm" id="modeSeg" style="width:100%;display:flex">
+                            <button data-mode="period" class="on flex1">TB giai đoạn</button>
+                            <button data-mode="month" class="flex1">Từng tháng</button>
+                            <button data-mode="year" class="flex1">Từng năm</button>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </details>
 
-            <div class="space-y-2">
-                <label class="text-xs font-semibold text-slate-300">Chỉ số giải đoán (Spectral Index)</label>
-                <div class="space-y-1.5">
-                    <label class="flex items-center justify-between p-2 rounded-lg bg-slate-800/50 border border-slate-700 hover:bg-slate-800 transition cursor-pointer">
-                        <div class="flex items-center gap-2">
-                            <input type="radio" name="index" value="TVDI" checked class="text-blue-500">
-                            <div>
-                                <p class="text-xs font-bold text-slate-200">TVDI</p>
-                                <p class="text-[10px] text-slate-400">Chỉ số khô hạn nhiệt thực vật</p>
-                            </div>
-                        </div>
-                        <span class="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded border border-red-500/30">Hạn Hán</span>
-                    </label>
+            <details class="card" open id="secFilter">
+                <summary class="card-h"><span><i class="fa-solid fa-filter lead"></i>Lọc theo ngưỡng</span><i class="fa-solid fa-chevron-down chev"></i></summary>
+                <div class="card-b">
+                    <div id="thrBox"></div>
+                    <div class="presets">
+                        <button class="chip" data-preset="hot">🔥 LST &gt; 40</button>
+                        <button class="chip" data-preset="bare">🏙️ NDVI &lt; 0.2</button>
+                        <button class="chip" data-preset="dry">🏜️ TVDI &gt; 0.4</button>
+                        <button class="chip" data-preset="none">✕ Bỏ lọc</button>
+                    </div>
+                    <div class="result-chip" id="resultChip" hidden></div>
+                </div>
+            </details>
 
-                    <label class="flex items-center justify-between p-2 rounded-lg bg-slate-800/50 border border-slate-700 hover:bg-slate-800 transition cursor-pointer">
-                        <div class="flex items-center gap-2">
-                            <input type="radio" name="index" value="LST" class="text-blue-500">
-                            <div>
-                                <p class="text-xs font-bold text-slate-200">LST</p>
-                                <p class="text-[10px] text-slate-400">Nhiệt độ bề mặt đất (°C)</p>
-                            </div>
-                        </div>
-                        <span class="text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded border border-orange-500/30">Nhiệt Đô Thị</span>
-                    </label>
-
-                    <label class="flex items-center justify-between p-2 rounded-lg bg-slate-800/50 border border-slate-700 hover:bg-slate-800 transition cursor-pointer">
-                        <div class="flex items-center gap-2">
-                            <input type="radio" name="index" value="NDVI" class="text-blue-500">
-                            <div>
-                                <p class="text-xs font-bold text-slate-200">NDVI</p>
-                                <p class="text-[10px] text-slate-400">Chỉ số phủ thực vật</p>
-                            </div>
-                        </div>
-                        <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30">Cây Xanh</span>
+            <section class="card rank">
+                <div class="card-h"><span><i class="fa-solid fa-ranking-star lead"></i>Xếp hạng <span id="rankCount">167</span> phường/xã</span>
+                    <label style="display:flex;gap:6px;align-items:center;text-transform:none;font-weight:600;font-size:11px;letter-spacing:0" title="Chỉ hiện phường thỏa ngưỡng">
+                        <span class="switch"><input type="checkbox" id="onlyMatch"><span></span></span> Chỉ thỏa ngưỡng
                     </label>
                 </div>
-            </div>
-
-            <div class="space-y-1">
-                <div class="flex justify-between items-center text-xs">
-                    <label class="font-semibold text-slate-300">Ngưỡng lọc (Threshold)</label>
-                    <span id="thresholdVal" class="text-blue-400 font-mono font-bold">&gt; 0.50</span>
+                <div class="rank-tools">
+                    <div class="search"><i class="fa-solid fa-magnifying-glass"></i><input id="searchBox" placeholder="Tìm phường/xã…"></div>
                 </div>
-                <input type="range" id="thresholdSlider" min="0" max="1" step="0.05" value="0.50" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500">
-            </div>
-
-            <button id="btnQuery" class="w-full mt-2 py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95">
-                <i class="fa-solid fa-bolt"></i>
-                <span id="btnText">Thực Thi Truy Vấn (HTTP Range)</span>
-            </button>
-
-            <div class="mt-auto bg-slate-900/90 border border-slate-800 rounded-lg p-2.5 text-[11px] space-y-1.5">
-                <div class="flex items-center justify-between text-slate-400 border-b border-slate-800 pb-1">
-                    <span class="font-bold text-slate-300"><i class="fa-solid fa-database text-blue-400"></i> Metadata (PostGIS)</span>
-                    <span class="text-[9px] text-emerald-400 bg-emerald-950/60 px-1 rounded">COG Ready</span>
+                <div class="rank-head" id="rankHead">
+                    <span>#</span><span>Phường / Xã</span>
+                    <button data-sort="LST">LST ↓</button><button data-sort="NDVI">NDVI ↑</button><button data-sort="TVDI">TVDI ↓</button>
                 </div>
-                <div class="flex justify-between text-slate-400"><span>Bản đồ nền:</span><span class="text-slate-200 font-mono">Esri World Imagery</span></div>
-                <div class="flex justify-between text-slate-400"><span>Định dạng lớp:</span><span class="text-slate-200 font-mono">Raster Cloud GeoTIFF</span></div>
-                <div class="flex justify-between text-slate-400"><span>Hệ tọa độ:</span><span class="text-slate-200 font-mono">EPSG:4326 (WGS 84)</span></div>
-            </div>
+                <div class="rank-list scroll" id="rankList"></div>
+                <div class="rank-foot">
+                    <button class="btn flex1" id="btnCsv"><i class="fa-solid fa-file-csv" style="color:#16a34a"></i> Xuất CSV</button>
+                    <button class="btn flex1" id="btnGeo"><i class="fa-solid fa-map-location-dot" style="color:#2563eb"></i> GeoJSON</button>
+                </div>
+            </section>
         </aside>
 
-        <!-- MAP CANVAS & CHARTS -->
-        <main class="col-span-9 flex flex-col gap-3 min-h-0">
-            
-            <div class="flex-1 relative rounded-xl border border-slate-800 overflow-hidden shadow-2xl glass-panel">
-                <div id="map" class="w-full h-full z-0 bg-slate-950"></div>
+        <!-- BẢN ĐỒ (thành phần chủ đạo) -->
+        <section class="card mapcard" id="mapcard">
+            <div class="mapwrap" id="mapwrap">
+                <div id="map"></div>
+                <div id="frame"></div>
 
-                <!-- LEGEND -->
-                <div class="absolute top-3 right-3 z-10 glass-panel p-3 rounded-lg border border-slate-700 shadow-xl w-64">
-                    <p class="text-xs font-bold text-slate-200 mb-1 flex items-center justify-between">
-                        CHÚ GIẢI ẢNH GIẢI ĐOÁN
-                        <span id="legendTitle" class="text-[10px] font-bold text-red-400">Chỉ số TVDI</span>
-                    </p>
-                    <div id="legendBar" class="h-3 w-full rounded my-1.5 bg-gradient-to-r from-yellow-300 via-orange-500 to-red-600"></div>
-                    <div class="flex justify-between text-[10px] font-mono text-slate-300 font-bold" id="legendLabels">
-                        <span>0.0 (Thấp / Ẩm)</span>
-                        <span>1.0 (Cao / Hạn)</span>
+                <div class="map-title" id="mapTitle">
+                    <h2 id="mapTitleH">BẢN ĐỒ NHIỆT ĐỘ BỀ MẶT (LST) TP. HỒ CHÍ MINH</h2>
+                    <p id="mapTitleP">—</p>
+                </div>
+
+                <div class="north" id="north" title="Hướng Bắc (bấm để xoay về Bắc)">
+                    <svg id="northSvg" width="40" height="58" viewBox="0 0 40 58">
+                        <text x="20" y="12" text-anchor="middle" font-size="12" font-weight="800" fill="#0f172a" font-family="Be Vietnam Pro, sans-serif">N</text>
+                        <polygon points="20,15 29,48 20,41 11,48" fill="#fff" stroke="#0f172a" stroke-width="1.4" />
+                        <polygon points="20,15 20,41 11,48" fill="#0f172a" />
+                        <circle cx="20" cy="36" r="2" fill="#dc2626" />
+                    </svg>
+                </div>
+
+                <div class="map-tools">
+                    <button class="icon-btn" id="btnHome" title="Về toàn thành phố"><i class="fa-solid fa-house"></i></button>
+                    <button class="icon-btn" id="btnZoomIn" title="Phóng to"><i class="fa-solid fa-plus"></i></button>
+                    <button class="icon-btn" id="btnZoomOut" title="Thu nhỏ"><i class="fa-solid fa-minus"></i></button>
+                    <button class="icon-btn" id="btnGrid" title="Bật/tắt lưới toạ độ"><i class="fa-solid fa-table-cells"></i></button>
+                    <button class="icon-btn" id="btnExport" title="Xuất bản đồ (PNG) có khung, toạ độ, la bàn, thang màu"><i class="fa-solid fa-image"></i></button>
+                    <button class="icon-btn" id="btnTour" title="Trình diễn: bay qua các phường nóng nhất"><i class="fa-solid fa-plane"></i></button>
+                </div>
+
+                <div class="legend" id="legend">
+                    <div class="lt"><span id="legTitle" style="font-size:11.5px;color:var(--text);font-weight:800">LST (°C)</span><span id="legSub">TB phường/xã</span></div>
+                    <div class="bar-wrap">
+                        <div class="marker" id="legMarker"><b id="legMarkerV">0</b><i></i></div>
+                        <div class="bar" id="legBar"></div>
                     </div>
+                    <div class="ticks" id="legTicks"></div>
+                    <div class="ends"><span id="legLow">Mát</span><span id="legHigh">Nóng</span></div>
+                    <div class="extra" id="legExtra"></div>
                 </div>
 
-                <div id="tileBadge" class="absolute bottom-3 left-3 z-10 glass-panel px-3 py-1.5 rounded-lg border border-blue-500/30 flex items-center gap-2 text-xs text-slate-200 shadow-xl">
-                    <span class="w-2 h-2 rounded-full bg-blue-400 animate-ping"></span>
-                    <span id="tileText">Đã load <strong>12 Tile ảnh (COG)</strong> • Vùng: Quận 1, TP.HCM</span>
+                <div class="readout" id="readout">
+                    <div class="xy mono" id="roXY">Di chuột lên bản đồ</div>
+                    <div class="pv" id="roVal">—</div>
                 </div>
+
+                <div class="tip" id="tip" hidden></div>
+                <div class="busy" id="busy" hidden><i class="fa-solid fa-circle-notch fa-spin"></i><span id="busyT">Đang xử lý ảnh…</span></div>
+
+                <button class="edge-btn l" id="toggleLeft" title="Ẩn/hiện bảng trái"><i class="fa-solid fa-chevron-left"></i></button>
+                <button class="edge-btn r" id="toggleRight" title="Ẩn/hiện bảng phải"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
 
-            <div class="h-44 grid grid-cols-12 gap-3 shrink-0">
-                <div class="col-span-8 glass-panel rounded-xl p-3 border border-slate-800 flex flex-col justify-between">
-                    <div class="flex justify-between items-center mb-1">
-                        <h3 class="text-xs font-bold text-slate-200 flex items-center gap-2" id="chartHeaderTitle">
-                            <i class="fa-solid fa-chart-line text-blue-400"></i> Biến Động Chỉ Số Giải Đoán Theo Thời Gian (2017 - 2026)
-                        </h3>
-                        <span class="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Khu vực đang chọn</span>
-                    </div>
-                    <div class="flex-1 relative w-full h-full min-h-0">
-                        <canvas id="trendChart"></canvas>
-                    </div>
+            <div class="timeline">
+                <button class="icon-btn" id="tlPrev" title="Khung trước (←)"><i class="fa-solid fa-backward-step"></i></button>
+                <button class="play" id="tlPlay" title="Chạy animation (Space)"><i class="fa-solid fa-play"></i></button>
+                <button class="icon-btn" id="tlNext" title="Khung sau (→)"><i class="fa-solid fa-forward-step"></i></button>
+                <div class="tl-now"><b id="tlNow">—</b><small id="tlSub">—</small></div>
+                <div class="tl-track">
+                    <input type="range" id="tlRange" min="0" max="0" value="0">
+                    <div class="tl-years" id="tlYears"></div>
                 </div>
-
-                <div class="col-span-4 glass-panel rounded-xl p-3 border border-slate-800 flex flex-col justify-between">
-                    <h3 class="text-xs font-bold text-slate-200 flex items-center gap-2 border-b border-slate-800 pb-1.5">
-                        <i class="fa-solid fa-gauge-high text-emerald-400"></i> Đánh Giá Hiệu Năng Truy Vấn
-                    </h3>
-
-                    <div class="space-y-2 text-xs">
-                        <div>
-                            <div class="flex justify-between text-[11px] text-slate-400 mb-0.5">
-                                <span>PostGIS Index (GiST Search):</span>
-                                <span class="font-mono text-emerald-400" id="latencyPostgis">12 ms</span>
-                            </div>
-                            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                <div class="bg-emerald-500 h-full rounded-full" style="width: 25%"></div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="flex justify-between text-[11px] text-slate-400 mb-0.5">
-                                <span>HTTP Range Request (COG Fetch):</span>
-                                <span class="font-mono text-blue-400" id="latencyHttp">45 ms</span>
-                            </div>
-                            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                <div class="bg-blue-500 h-full rounded-full" style="width: 50%"></div>
-                            </div>
-                        </div>
-
-                        <div class="pt-1 border-t border-slate-800/80 flex justify-between items-center">
-                            <span class="text-slate-300 font-bold text-xs">Tổng thời gian (Latency):</span>
-                            <span class="text-sm font-mono font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 px-2 py-0.5 rounded" id="latencyTotal">148 ms</span>
-                        </div>
-                    </div>
-                </div>
+                <select class="sel" id="speedSel" title="Tốc độ animation">
+                    <option value="2400">Chậm</option>
+                    <option value="1400" selected>Vừa</option>
+                    <option value="800">Nhanh</option>
+                </select>
+                <label style="display:flex;gap:6px;align-items:center;font-size:11.5px;font-weight:600;color:var(--text-2)"><span class="switch"><input type="checkbox" id="loopChk" checked><span></span></span>Lặp</label>
             </div>
+        </section>
 
-        </main>
+        <!-- PANEL PHẢI: chi tiết phường + thống kê -->
+        <aside class="panel right" id="rightPanel">
+            <section class="card">
+                <div class="tabs" id="rTabs">
+                    <button data-tab="ward" class="on"><i class="fa-solid fa-location-dot"></i> Phường/Xã</button>
+                    <button data-tab="stats"><i class="fa-solid fa-chart-column"></i> Thống kê</button>
+                </div>
+                <div class="tab-body scroll" id="tabWard"></div>
+                <div class="tab-body scroll" id="tabStats" hidden></div>
+            </section>
+        </aside>
+    </main>
+
+    <!-- ===================== MODAL QUẢN TRỊ (chỉ admin) ===================== -->
+    <div class="modal" id="adminModal" hidden>
+        <div class="card modal-box">
+            <nav class="modal-nav" id="admNav">
+                <h4><i class="fa-solid fa-user-shield" style="color:#db2777"></i> Quản trị hệ thống</h4>
+                <button data-p="data" class="on"><i class="fa-solid fa-satellite"></i> Dữ liệu &amp; GEE</button>
+                <button data-p="tool"><i class="fa-solid fa-file-excel"></i> Xử lý ảnh .tif</button>
+                <button data-p="style"><i class="fa-solid fa-palette"></i> Thang màu</button>
+                <button data-p="users"><i class="fa-solid fa-users"></i> Tài khoản</button>
+                <button data-p="log"><i class="fa-solid fa-clock-rotate-left"></i> Nhật ký</button>
+                <button data-p="sys"><i class="fa-solid fa-server"></i> Hệ thống</button>
+            </nav>
+            <div class="modal-main scroll" id="admMain"></div>
+            <button class="icon-btn modal-close" id="admClose" title="Đóng"><i class="fa-solid fa-xmark"></i></button>
+        </div>
     </div>
 
-    <!-- JAVASCRIPT LOGIC -->
+    <div id="toasts"></div>
+
+    <!-- ===================== JAVASCRIPT ===================== -->
     <script>
-        function updateClock() {
-            document.getElementById('liveClock').innerText = new Date().toLocaleTimeString('vi-VN');
+        // =====================================================================
+        // 0. TIỆN ÍCH
+        // =====================================================================
+        const $ = (s, r = document) => r.querySelector(s);
+        const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+        const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const fold = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+        const easeInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        const fmtInt = n => (n == null || !isFinite(n)) ? '–' : Math.round(n).toLocaleString('vi-VN');
+        const ymLabel = ym => { const [y, m] = ym.split('-'); return `${m}/${y}`; };
+        const monthDiff = (a, b) => { const [y1, m1] = a.split('-').map(Number), [y2, m2] = b.split('-').map(Number); return (y2 - y1) * 12 + (m2 - m1); };
+
+        function hexToRgb(h) {
+            h = String(h).trim().replace('#', '');
+            if (h.length === 3) h = h.split('').map(c => c + c).join('');
+            const n = parseInt(h, 16);
+            return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
         }
-        setInterval(updateClock, 1000);
-        updateClock();
+        const rgbStr = c => `rgb(${c[0]},${c[1]},${c[2]})`;
+        const mix = (a, b, t) => [0, 1, 2].map(k => a[k] + (b[k] - a[k]) * t);
 
-        // 1. KHỞI TẠO BẢN ĐỒ VỆ TINH
-        const map = L.map('map', { zoomControl: false }).setView([10.7769, 106.7009], 14);
-        
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 19,
-            attribution: 'Tiles &copy; Esri &mdash; Satellite Imagery'
-        }).addTo(map);
-
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-        // Biến lưu dữ liệu GeoJSON ranh giới Quận 1 để cắt pixel
-        let quan1GeoJSON = null;
-        let activeOverlayGroup = L.layerGroup().addTo(map);
-
-        fetch('saigon.geojson')
-            .then(res => res.json())
-            .then(data => {
-                L.geoJSON(data, {
-                    style: { color: '#ffffff', weight: 1.5, dashArray: '4, 4', fillOpacity: 0 }
-                }).addTo(map);
-            }).catch(e => console.log('Chưa tìm thấy saigon.geojson'));
-
-        fetch('quan1.geojson')
-            .then(res => res.json())
-            .then(data => {
-                quan1GeoJSON = data;
-                L.geoJSON(data, {
-                    style: { color: '#38bdf8', weight: 3, fillColor: 'transparent', fillOpacity: 0 }
-                }).addTo(map);
-                renderRemoteSensingLayers(); // Tải lại raster khi đã có ranh giới
-            }).catch(e => console.log('Chưa tìm thấy quan1.geojson'));
-
-        // Thuật toán kiểm tra điểm [lng, lat] nằm trong Polygon
-        function pointInPoly(pt, ring) {
-            let x = pt[0], y = pt[1];
-            let inside = false;
-            for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-                let xi = ring[i][0], yi = ring[i][1];
-                let xj = ring[j][0], yj = ring[j][1];
-                let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-                if (intersect) inside = !inside;
-            }
-            return inside;
+        function toast(msg, type = 'info', ms = 3200) {
+            const icon = { ok: 'fa-circle-check', err: 'fa-triangle-exclamation', info: 'fa-circle-info' }[type];
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            el.innerHTML = `<i class="fa-solid ${icon}"></i><span>${msg}</span>`;
+            $('#toasts').appendChild(el);
+            setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, ms);
         }
 
-        function isPointInGeoJSON(lat, lng, geojson) {
-            if (!geojson || !geojson.features) return true;
-            for (let feature of geojson.features) {
-                let geom = feature.geometry;
-                if (geom.type === 'Polygon') {
-                    if (pointInPoly([lng, lat], geom.coordinates[0])) return true;
-                } else if (geom.type === 'MultiPolygon') {
-                    for (let poly of geom.coordinates) {
-                        if (pointInPoly([lng, lat], poly[0])) return true;
-                    }
+        function download(filename, content, mime) {
+            const blob = content instanceof Blob ? content : new Blob([content], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+            setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
+        }
+
+        function animateNumber(el, to, dec = 2, dur = 600) {
+            const from = parseFloat(el.dataset.v);
+            el.dataset.v = to;
+            if (!isFinite(to)) { el.textContent = '–'; return; }
+            if (!isFinite(from)) { el.textContent = to.toFixed(dec); return; }
+            const t0 = performance.now();
+            const tick = now => {
+                const p = clamp((now - t0) / dur, 0, 1);
+                el.textContent = (from + (to - from) * easeInOut(p)).toFixed(dec);
+                if (p < 1) requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        }
+
+        // SHA-256 thuần JS (để băm mật khẩu, chạy được cả khi không có HTTPS)
+        function sha256(str) {
+            const ascii = unescape(encodeURIComponent(str));
+            const rr = (v, a) => (v >>> a) | (v << (32 - a));
+            const maxWord = 2 ** 32;
+            const words = [], bitLen = ascii.length * 8;
+            let hash = [], k = [], pc = 0;
+            const composite = {};
+            for (let cand = 2; pc < 64; cand++) {
+                if (!composite[cand]) {
+                    for (let i = 0; i < 313; i += cand) composite[i] = cand;
+                    hash[pc] = (Math.pow(cand, .5) * maxWord) | 0;
+                    k[pc++] = (Math.pow(cand, 1 / 3) * maxWord) | 0;
                 }
             }
+            let s = ascii + '\x80';
+            while (s.length % 64 - 56) s += '\x00';
+            for (let i = 0; i < s.length; i++) words[i >> 2] |= s.charCodeAt(i) << ((3 - i) % 4) * 8;
+            words[words.length] = (bitLen / maxWord) | 0;
+            words[words.length] = bitLen;
+            for (let j = 0; j < words.length;) {
+                const w = words.slice(j, j += 16);
+                const old = hash;
+                hash = hash.slice(0, 8);
+                for (let i = 0; i < 64; i++) {
+                    const w15 = w[i - 15], w2 = w[i - 2];
+                    const a = hash[0], e = hash[4];
+                    const t1 = hash[7] + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)) + ((e & hash[5]) ^ ((~e) & hash[6])) + k[i] +
+                        (w[i] = (i < 16) ? w[i] : (w[i - 16] + (rr(w15, 7) ^ rr(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rr(w2, 17) ^ rr(w2, 19) ^ (w2 >>> 10))) | 0);
+                    const t2 = (rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+                    hash = [(t1 + t2) | 0].concat(hash);
+                    hash[4] = (hash[4] + t1) | 0;
+                }
+                for (let i = 0; i < 8; i++) hash[i] = (hash[i] + old[i]) | 0;
+            }
+            let out = '';
+            for (let i = 0; i < 8; i++) for (let j = 3; j + 1; j--) { const b = (hash[i] >> (j * 8)) & 255; out += (b < 16 ? '0' : '') + b.toString(16); }
+            return out;
+        }
+
+        // =====================================================================
+        // 1. CẤU HÌNH CHỈ SỐ & THANG MÀU (theo thang màu GEE của cô)
+        // =====================================================================
+        const IDX = ['LST', 'NDVI', 'TVDI'];
+        const DEFAULT_CFG = {
+            LST: {
+                title: 'NHIỆT ĐỘ BỀ MẶT (LST)', desc: 'Nhiệt độ bề mặt đất', unit: '°C', min: 25, max: 45, dec: 2, order: 'desc',
+                lowTxt: 'Mát', highTxt: 'Nóng', icon: 'fa-temperature-high', color: '#dc2626',
+                thr: { op: '>', val: 40, min: 20, max: 55, step: 0.5 },
+                palette: ['#0000FF', '#0066FF', '#00FFFF', '#00FF00', '#FFFF00', '#FFCC00', '#FF6600', '#FF0000'],
+                classes: [[30, 'Mát'], [35, 'Ấm'], [40, 'Nóng'], [45, 'Rất nóng'], [Infinity, 'Cực nóng']]
+            },
+            NDVI: {
+                title: 'CHỈ SỐ THỰC VẬT (NDVI)', desc: 'Chỉ số khác biệt thực vật', unit: '', min: -0.2, max: 1, dec: 3, order: 'asc',
+                lowTxt: 'Bê tông / đất trống', highTxt: 'Cây xanh dày', icon: 'fa-leaf', color: '#16a34a',
+                thr: { op: '<', val: 0.2, min: -0.5, max: 1, step: 0.01 },
+                palette: ['#FF0000', '#EF7D00', '#EFEF00', '#ADEF2E', '#00EF00', '#00EFEF', '#007EFF'],
+                classes: [[0, 'Mặt nước'], [0.2, 'Đô thị / đất trống'], [0.4, 'Thực vật thưa'], [0.6, 'Thực vật trung bình'], [Infinity, 'Thực vật dày']]
+            },
+            TVDI: {
+                title: 'CHỈ SỐ KHÔ HẠN (TVDI)', desc: 'Chỉ số khô hạn nhiệt độ – thực vật', unit: '', min: 0, max: 1, dec: 3, order: 'desc',
+                lowTxt: 'Ẩm', highTxt: 'Khô hạn', icon: 'fa-droplet', color: '#d97706',
+                thr: { op: '>', val: 0.4, min: -0.2, max: 1, step: 0.01 },
+                palette: ['#0000FF', '#0066FF', '#00FFFF', '#00FF00', '#FFFF00', '#FFCC00', '#FF6600', '#FF0000'],
+                classes: [[0.2, 'Rất ẩm'], [0.4, 'Ẩm'], [0.6, 'Bình thường'], [0.8, 'Khô hạn'], [Infinity, 'Hạn nặng']]
+            }
+        };
+        const CFG_KEY = 'webgis_cfg_v1';
+        let CFG = loadCfg();
+        let PAL = {};
+        function loadCfg() {
+            const c = structuredClone(DEFAULT_CFG);
+            try {
+                const s = JSON.parse(localStorage.getItem(CFG_KEY) || 'null');
+                if (s) for (const k of IDX) if (s[k]) for (const f of ['min', 'max', 'palette']) if (s[k][f] != null) c[k][f] = s[k][f];
+            } catch (e) { }
+            return c;
+        }
+        function rebuildPalettes() { for (const k of IDX) PAL[k] = CFG[k].palette.map(hexToRgb); }
+        rebuildPalettes();
+
+        function colorAt(idx, v) {
+            if (v == null || !isFinite(v)) return null;
+            const c = CFG[idx], p = PAL[idx];
+            const t = clamp((v - c.min) / (c.max - c.min), 0, 1);
+            const x = t * (p.length - 1), i = Math.min(Math.floor(x), p.length - 2), f = x - i;
+            return [0, 1, 2].map(j => Math.round(p[i][j] + (p[i + 1][j] - p[i][j]) * f));
+        }
+        // Vạch chia "đẹp" cho thang màu: -0.2, 0, 0.2 … hoặc 25, 30, 35 …
+        function niceTicks(lo, hi, target = 6) {
+            const raw = (hi - lo) / target, p = 10 ** Math.floor(Math.log10(raw));
+            const step = [1, 2, 2.5, 5, 10].map(m => m * p).find(s => s >= raw);
+            const out = [];
+            for (let v = Math.ceil(lo / step - 1e-9) * step; v <= hi + 1e-9; v += step) out.push(+v.toFixed(6));
+            return out;
+        }
+        const gradientCss = idx => `linear-gradient(to right, ${CFG[idx].palette.join(', ')})`;
+        const fmt = (idx, v) => (v == null || !isFinite(v)) ? '–' : v.toFixed(CFG[idx].dec);
+        const fmtU = (idx, v) => fmt(idx, v) + ((CFG[idx].unit && isFinite(v)) ? ' ' + CFG[idx].unit : '');
+        const classOf = (idx, v) => { if (!isFinite(v)) return ''; for (const [lim, name] of CFG[idx].classes) if (v < lim) return name; return ''; };
+        const sortDirTxt = idx => CFG[idx].order === 'desc' ? '↓' : '↑';
+
+        // =====================================================================
+        // 2. TRẠNG THÁI ỨNG DỤNG
+        // =====================================================================
+        const S = {
+            idx: 'LST', view: '2D', layer: 'ward', basemap: 'light', grid: true,
+            from: null, to: null, mode: 'period', frames: [], frameI: 0,
+            playing: false, speed: 1400, loop: true,
+            filters: {}, onlyMatch: false, search: '',
+            sortBy: 'LST', sortDir: 'desc', selected: null, hover: null, tab: 'ward'
+        };
+        for (const k of IDX) S.filters[k] = { on: false, op: DEFAULT_CFG[k].thr.op, val: DEFAULT_CFG[k].thr.val };
+
+        let DATA = null, WARDS = null, PROVINCE = null, N = 0, META = [], ALL_MONTHS = [];
+        let CUR = null;          // kết quả tính toán cho khung thời gian hiện tại
+        let USER = null;         // phiên đăng nhập hiện tại
+        const PERF = { loadMs: 0, bytes: 0 };
+
+        // =====================================================================
+        // 3. XÁC THỰC & PHÂN QUYỀN
+        // =====================================================================
+        const USERS_KEY = 'webgis_users_v1', SESSION_KEY = 'webgis_session_v1', LOG_KEY = 'webgis_log_v1';
+        const hashPw = (u, p) => sha256(`${u}::${p}::webgis-tk13`);
+        function getUsers() { try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); } catch (e) { return []; } }
+        function saveUsers(u) { localStorage.setItem(USERS_KEY, JSON.stringify(u)); }
+        // Mã băm mật khẩu admin (chỉ lưu mã băm, không lưu mật khẩu). Trước khi đưa web lên mạng, đổi mật khẩu bằng cách:
+        // mở web -> F12 -> Console -> gõ  hashPw('admin', 'MatKhauMoi')  -> dán chuỗi kết quả vào đây.
+        const ADMIN_HASH = 'acdf0566df99f0edcd44e53b4352234d73d754e887e0bccf1b150755326d5d92';
+        function initUsers() {
+            let users = getUsers();
+            if (!users.length) users = [
+                { u: 'admin', name: 'Quản trị viên', role: 'admin', h: ADMIN_HASH },
+                { u: 'nguoidung', name: 'Người dùng', role: 'user', h: hashPw('nguoidung', '123456') }
+            ];
+            // khi ADMIN_HASH trong mã nguồn thay đổi -> áp mật khẩu mới cho admin trên mọi trình duyệt
+            if (localStorage.getItem('webgis_admin_seed') !== ADMIN_HASH) {
+                const a = users.find(x => x.u === 'admin');
+                if (a) Object.assign(a, { h: ADMIN_HASH, role: 'admin' });
+                else users.push({ u: 'admin', name: 'Quản trị viên', role: 'admin', h: ADMIN_HASH });
+                localStorage.setItem('webgis_admin_seed', ADMIN_HASH);
+            }
+            saveUsers(users);
+        }
+        function logAct(action) {
+            try {
+                const l = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+                l.unshift({ t: new Date().toISOString(), u: USER?.u || '—', a: action });
+                localStorage.setItem(LOG_KEY, JSON.stringify(l.slice(0, 300)));
+            } catch (e) { }
+        }
+        const isAdmin = () => USER?.role === 'admin';
+        function requireAdmin(what) {
+            if (isAdmin()) return true;
+            toast(`Bạn không có quyền: ${what}. Chỉ quản trị viên được thực hiện.`, 'err');
             return false;
         }
-
-        // 2. DỮ LIỆU CÁC VÙNG VÀ CẢNH QUAN
-        const locations = {
-            'q1': { coords: [10.7769, 106.7009], zoom: 14, name: 'Quận 1, TP.HCM', tiles: 12 },
-            'thuduc': { coords: [10.8494, 106.7725], zoom: 13, name: 'TP. Thủ Đức', tiles: 28 },
-            'q7': { coords: [10.7341, 106.7218], zoom: 13, name: 'Quận 7, TP.HCM', tiles: 16 },
-            'cuchi': { coords: [11.0067, 106.5132], zoom: 12, name: 'Huyện Củ Chi', tiles: 45 }
-        };
-
-        // Hàm vẽ ô pixel viễn thám mịn & lọc theo ngưỡng threshold
-        function renderRemoteSensingLayers() {
-            activeOverlayGroup.clearLayers();
-
-            const locKey = document.getElementById('locationSelect').value;
-            const indexVal = document.querySelector('input[name="index"]:checked').value;
-            const threshold = parseFloat(document.getElementById('thresholdSlider').value);
-            const center = locations[locKey].coords;
-
-            let colorPalette = [];
-            let legendBg = "";
-            let legendTexts = [];
-
-            if (indexVal === 'TVDI') {
-                colorPalette = ['#fef0d9', '#fdcc8a', '#fc8d59', '#e34a33', '#b30000'];
-                legendBg = "linear-gradient(to right, #fef0d9, #fdcc8a, #fc8d59, #e34a33, #b30000)";
-                legendTexts = ["0.0 (Ẩm)", "1.0 (Hạn Khô)"];
-                document.getElementById('legendTitle').innerText = "Chỉ số TVDI (Hạn Hán)";
-                document.getElementById('legendTitle').className = "text-[10px] font-bold text-red-400";
-            } else if (indexVal === 'LST') {
-                colorPalette = ['#feebe2', '#fbb4b9', '#f768a1', '#c51b8a', '#7a0177'];
-                legendBg = "linear-gradient(to right, #feebe2, #fbb4b9, #f768a1, #c51b8a, #7a0177)";
-                legendTexts = ["26°C (Mát)", "39°C (Nóng)"];
-                document.getElementById('legendTitle').innerText = "Nhiệt độ LST (°C)";
-                document.getElementById('legendTitle').className = "text-[10px] font-bold text-orange-400";
-            } else if (indexVal === 'NDVI') {
-                colorPalette = ['#d73027', '#fee08b', '#d9ef8b', '#91cf60', '#1a9850'];
-                legendBg = "linear-gradient(to right, #d73027, #fee08b, #d9ef8b, #91cf60, #1a9850)";
-                legendTexts = ["-0.1 (Bê tông)", "0.85 (Cây rậm)"];
-                document.getElementById('legendTitle').innerText = "Chỉ số NDVI (Thực Vật)";
-                document.getElementById('legendTitle').className = "text-[10px] font-bold text-emerald-400";
-            }
-
-            document.getElementById('legendBar').style.background = legendBg;
-            document.getElementById('legendLabels').innerHTML = `<span>${legendTexts[0]}</span><span>${legendTexts[1]}</span>`;
-
-            const lat = center[0];
-            const lng = center[1];
-            const step = 0.0008; // Bước nhỏ cho độ phân giải pixel mịn chuẩn viễn thám
-
-            for (let i = -20; i <= 20; i++) {
-                for (let j = -20; j <= 20; j++) {
-                    const pLat = lat + (i * step);
-                    const pLng = lng + (j * step);
-
-                    // Cắt pixel theo polygon nếu đang ở Quận 1
-                    if (locKey === 'q1' && quan1GeoJSON) {
-                        if (!isPointInGeoJSON(pLat + step/2, pLng + step/2, quan1GeoJSON)) continue;
-                    } else if (locKey !== 'q1') {
-                        // Tạo viền giả lập bo tròn cho các quận khác
-                        const dist = Math.sqrt(i*i + j*j);
-                        if (dist > 16) continue;
-                    }
-
-                    // Giả lập giá trị chỉ số từ 0.0 đến 1.0
-                    const rawVal = Math.abs(Math.sin(i * 12.9898 + j * 78.233 + lat * 100));
-                    
-                    // LỌC THEO NGƯỠNG (THRESHOLD): Nếu nhỏ hơn ngưỡng sẽ bị ẩn đi
-                    if (rawVal < threshold) continue;
-
-                    const colorIdx = Math.floor(rawVal * colorPalette.length) % colorPalette.length;
-                    const bounds = [
-                        [pLat, pLng],
-                        [pLat + step, pLng + step]
-                    ];
-
-                    L.rectangle(bounds, {
-                        color: 'transparent',
-                        fillColor: colorPalette[colorIdx],
-                        fillOpacity: 0.65
-                    }).addTo(activeOverlayGroup);
-                }
-            }
+        function login(u, p) {
+            const user = getUsers().find(x => x.u === u.trim());
+            if (!user || user.h !== hashPw(user.u, p)) return null;
+            USER = { u: user.u, name: user.name, role: user.role };
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify(USER));
+            logAct('Đăng nhập');
+            return USER;
+        }
+        function restoreSession() {
+            try {
+                const s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+                if (!s) return null;
+                const user = getUsers().find(x => x.u === s.u);
+                return user ? { u: user.u, name: user.name, role: user.role } : null;
+            } catch (e) { return null; }
+        }
+        function applyRole() {
+            document.body.dataset.role = USER.role;
+            $('#whoName').textContent = USER.name;
+            $('#whoRole').textContent = USER.role === 'admin' ? 'QUẢN TRỊ VIÊN' : 'NGƯỜI DÙNG (chỉ xem)';
+            $('#avatar').textContent = USER.name.split(' ').map(w => w[0]).slice(-2).join('').toUpperCase();
         }
 
-        renderRemoteSensingLayers();
+        // =====================================================================
+        // 4. TẢI DỮ LIỆU THẬT (sinh từ tao_du_lieu_webgis.py)
+        // =====================================================================
+        function setProgress(p, t) {
+            if (!$('#progFill')) return;   // splash đã đóng (vd. admin tải lại dữ liệu)
+            $('#progFill').style.width = p + '%'; if (t) $('#progText').textContent = t;
+        }
 
-        // 3. XỬ LÝ SỰ KIỆN KHI BẤM BỘ LỌC
-        document.getElementById('locationSelect').addEventListener('change', () => {
-            const locKey = document.getElementById('locationSelect').value;
-            const selectedLoc = locations[locKey];
-            map.flyTo(selectedLoc.coords, selectedLoc.zoom, { duration: 1.2 });
-            document.getElementById('tileText').innerHTML = `Đã load <strong>${selectedLoc.tiles} Tile ảnh (COG)</strong> • Vùng: ${selectedLoc.name}`;
-            renderRemoteSensingLayers();
-            updateChartData();
-        });
+        async function fetchJson(url) {
+            const r = await fetch(url, { cache: 'no-cache' });
+            if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+            const txt = await r.text();
+            PERF.bytes += txt.length;
+            return JSON.parse(txt);
+        }
 
-        document.querySelectorAll('input[name="index"]').forEach(radio => {
-            radio.addEventListener('change', () => {
-                renderRemoteSensingLayers();
-                updateChartData();
+        async function loadAllData() {
+            const t0 = performance.now();
+            setProgress(15, 'Đang tải ranh giới 168 phường/xã…');
+            const wardsP = fetchJson('data/phuong_xa.geojson').then(r => { setProgress(45, 'Đang tải thống kê LST · NDVI · TVDI…'); return r; });
+            const dataP = fetchJson('data/du_lieu_phuong.json');
+            const provP = fetchJson('saigon.geojson').catch(() => null);
+            const [w, d, p] = await Promise.all([wardsP, dataP, provP]);
+            PERF.loadMs = performance.now() - t0;
+            setProgress(75, 'Đang dựng bản đồ…');
+            applyData(d, w);
+            PROVINCE = p;
+        }
+
+        function applyData(d, w) {
+            // kiểm tra hết rồi mới thay dữ liệu, để file lỗi không làm hỏng dữ liệu đang dùng
+            const wards = w || WARDS;
+            if (!d || !d.series || !Array.isArray(d.wards) || !d.indices) throw new Error('File dữ liệu không đúng định dạng (thiếu series/wards/indices).');
+            if (d.wards.length !== wards.features.length) throw new Error(`Số phường trong dữ liệu (${d.wards.length}) khác ranh giới (${wards.features.length}).`);
+            for (const k of IDX) for (const m of d.indices[k]?.months || [])
+                if (!d.series[k]?.[m]?.mean || d.series[k][m].mean.length !== d.wards.length) throw new Error(`Thiếu/sai số liệu ${k} tháng ${m}.`);
+            WARDS = wards;
+            DATA = d;
+            N = WARDS.features.length;
+            pxToken++;
+            // Siêu dữ liệu từng phường: tên, bbox, tâm
+            META = WARDS.features.map((f, i) => {
+                const p = f.properties;
+                let x0 = 999, y0 = 999, x1 = -999, y1 = -999;
+                const walk = c => { if (typeof c[0] === 'number') { x0 = Math.min(x0, c[0]); x1 = Math.max(x1, c[0]); y0 = Math.min(y0, c[1]); y1 = Math.max(y1, c[1]); } else c.forEach(walk); };
+                walk(f.geometry.coordinates);
+                return { i, ...p, name: `${p.loai} ${p.ten_xa}`, bbox: [x0, y0, x1, y1], c: [(x0 + x1) / 2, (y0 + y1) / 2], key: fold(`${p.loai} ${p.ten_xa}`) };
             });
-        });
-
-        const slider = document.getElementById('thresholdSlider');
-        slider.addEventListener('input', (e) => {
-            document.getElementById('thresholdVal').innerText = `> ${parseFloat(e.target.value).toFixed(2)}`;
-            renderRemoteSensingLayers(); // Cập nhật hình ảnh trực tiếp khi kéo slider
-        });
-
-        document.getElementById('startDate').addEventListener('change', updateChartData);
-        document.getElementById('endDate').addEventListener('change', updateChartData);
-
-        // 4. BIỂU ĐỒ DỮ LIỆU THEO THỜI GIAN (CHART.JS)
-        const ctx = document.getElementById('trendChart').getContext('2d');
-        const trendChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026'],
-                datasets: [{
-                    label: 'Giá trị trung bình',
-                    data: [0.42, 0.51, 0.68, 0.75, 0.58, 0.62, 0.81, 0.73, 0.69, 0.78],
-                    backgroundColor: 'rgba(59, 130, 246, 0.85)',
-                    borderRadius: 4,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
-                    y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { size: 10 } }, min: 0, max: 1 }
-                }
-            }
-        });
-
-        // Hàm cập nhật biểu đồ động theo đúng khoảng năm được chọn
-        function updateChartData() {
-            const startVal = document.getElementById('startDate').value;
-            const endVal = document.getElementById('endDate').value;
-            
-            let startYear = startVal ? parseInt(startVal.substring(0, 4)) : 2017;
-            let endYear = endVal ? parseInt(endVal.substring(0, 4)) : 2026;
-            
-            if (startYear > endYear) {
-                const temp = startYear;
-                startYear = endYear;
-                endYear = temp;
-            }
-
-            // Đổi tiêu đề biểu đồ
-            document.getElementById('chartHeaderTitle').innerHTML = `<i class="fa-solid fa-chart-line text-blue-400"></i> Biến Động Chỉ Số Giải Đoán Theo Thời Gian (${startYear} - ${endYear})`;
-
-            const labels = [];
-            const data = [];
-            for (let y = startYear; y <= endYear; y++) {
-                labels.push(y.toString());
-                data.push((Math.random() * 0.45 + 0.35).toFixed(2));
-            }
-
-            trendChart.data.labels = labels;
-            trendChart.data.datasets[0].data = data;
-            trendChart.update();
+            ALL_MONTHS = [...new Set(IDX.flatMap(k => DATA.indices[k]?.months || []))].sort();
+            if (!S.from || !ALL_MONTHS.includes(S.from)) S.from = ALL_MONTHS[0];
+            if (!S.to || !ALL_MONTHS.includes(S.to)) S.to = ALL_MONTHS[ALL_MONTHS.length - 1];
+            valCache.clear(); pxCache.clear(); imgCache.clear();
+            wardKey = statsKey = null;
+            for (const k of IDX) if (!DATA.indices[k]) DATA.indices[k] = { months: [], files: {} };
+            fillMonthSelects();
         }
 
-        // Nút bấm thực thi truy vấn
-        document.getElementById('btnQuery').addEventListener('click', () => {
-            const btnText = document.getElementById('btnText');
-            btnText.innerText = "Đang truy vấn dữ liệu...";
-            setTimeout(() => {
-                renderRemoteSensingLayers();
-                updateChartData();
-                btnText.innerText = "Thực Thi Truy Vấn (HTTP Range)";
+        // =====================================================================
+        // 5. TÍNH GIÁ TRỊ THEO THỜI GIAN
+        // =====================================================================
+        const valCache = new Map();
+        function ctx() {
+            if (S.mode === 'period' || !S.frames.length) return { type: 'period', from: S.from, to: S.to };
+            const fr = S.frames[S.frameI];
+            return S.mode === 'year' ? { type: 'year', year: fr, from: S.from, to: S.to } : { type: 'month', ym: fr };
+        }
+        function monthsFor(idx, c) {
+            const ms = DATA.indices[idx]?.months || [];
+            if (c.type === 'period') return ms.filter(m => m >= c.from && m <= c.to);
+            if (c.type === 'year') return ms.filter(m => m.slice(0, 4) === c.year && m >= c.from && m <= c.to);
+            if (ms.includes(c.ym)) return [c.ym];
+            // chỉ số khác có thể không có ảnh đúng tháng -> lấy tháng gần nhất (tối đa ±2 tháng)
+            let best = null, bd = 99;
+            for (const m of ms) { const d = Math.abs(monthDiff(c.ym, m)); if (d < bd) { bd = d; best = m; } }
+            return bd <= 2 ? [best] : [];
+        }
+        function wardValues(idx, months) {
+            const key = idx + '|' + months.join(',');
+            if (valCache.has(key)) return valCache.get(key);
+            const sum = new Float64Array(N), cnt = new Uint16Array(N), out = new Float64Array(N).fill(NaN);
+            for (const m of months) {
+                const arr = DATA.series[idx][m].mean;
+                for (let i = 0; i < N; i++) { const v = arr[i]; if (v != null) { sum[i] += v; cnt[i]++; } }
+            }
+            for (let i = 0; i < N; i++) if (cnt[i]) out[i] = sum[i] / cnt[i];
+            valCache.set(key, out);
+            return out;
+        }
+        function cityMean(idx, months) {
+            const v = months.map(m => DATA.series[idx][m].city?.mean).filter(x => x != null);
+            return v.length ? v.reduce((a, b) => a + b, 0) / v.length : NaN;
+        }
+        function computeAll() {
+            const c = ctx(), V = {}, M = {}, rank = {};
+            for (const k of IDX) { M[k] = monthsFor(k, c); V[k] = wardValues(k, M[k]); }
+            const anyF = IDX.some(k => S.filters[k].on);
+            const match = new Int8Array(N).fill(-1);
+            let nMatch = 0;
+            if (anyF) for (let i = 0; i < N; i++) {
+                let ok = true;
+                for (const k of IDX) {
+                    const f = S.filters[k]; if (!f.on) continue;
+                    const v = V[k][i];
+                    if (!isFinite(v) || (f.op === '>' ? !(v > f.val) : !(v < f.val))) { ok = false; break; }
+                }
+                match[i] = ok ? 1 : 0; if (ok) nMatch++;
+            }
+            // Thứ hạng: LST cao->thấp, NDVI thấp->cao, TVDI cao->thấp
+            for (const k of IDX) {
+                const ids = [...Array(N).keys()].filter(i => isFinite(V[k][i]));
+                ids.sort((a, b) => CFG[k].order === 'desc' ? V[k][b] - V[k][a] : V[k][a] - V[k][b]);
+                const r = new Int16Array(N).fill(0);
+                ids.forEach((i, j) => r[i] = j + 1);
+                rank[k] = { r, n: ids.length };
+            }
+            CUR = { c, V, M, match, anyF, nMatch, rank };
+            return CUR;
+        }
+        function ctxLabel(c = CUR.c, idx = S.idx) {
+            const n = CUR.M[idx].length;
+            if (c.type === 'period') return `Trung bình <b>${ymLabel(c.from)} – ${ymLabel(c.to)}</b> (${n} ảnh tháng)`;
+            if (c.type === 'year') return `Năm <b>${c.year}</b> – trung bình ${n} ảnh tháng`;
+            const used = CUR.M[idx][0];
+            return used && used !== c.ym ? `Tháng <b>${ymLabel(c.ym)}</b> (ảnh gần nhất: ${ymLabel(used)})` : `Tháng <b>${ymLabel(c.ym)}</b>`;
+        }
 
-                const postgis = Math.floor(Math.random() * 8) + 8;
-                const http = Math.floor(Math.random() * 20) + 30;
-                document.getElementById('latencyPostgis').innerText = `${postgis} ms`;
-                document.getElementById('latencyHttp').innerText = `${http} ms`;
-                document.getElementById('latencyTotal').innerText = `${postgis + http + 50} ms`;
-            }, 300);
+        // =====================================================================
+        // 6. BẢN ĐỒ (MapLibre GL: 2D + 3D)
+        // =====================================================================
+        const ESRI = s => [`https://server.arcgisonline.com/ArcGIS/rest/services/${s}/MapServer/tile/{z}/{y}/{x}`];
+        const BASEMAPS = {
+            light: { base: ESRI('Canvas/World_Light_Gray_Base'), labels: ESRI('Canvas/World_Light_Gray_Reference'), maxzoom: 16, attr: 'Tiles © Esri — Esri, HERE, Garmin, © OpenStreetMap' },
+            street: { base: ESRI('World_Street_Map'), labels: null, maxzoom: 19, attr: 'Tiles © Esri — Esri, HERE, Garmin, © OpenStreetMap' },
+            sat: { base: ESRI('World_Imagery'), labels: ESRI('Reference/World_Boundaries_and_Places'), maxzoom: 19, attr: 'Tiles © Esri — Maxar, Earthstar Geographics' },
+            topo: { base: ESRI('World_Topo_Map'), labels: null, maxzoom: 19, attr: 'Tiles © Esri — Esri, HERE, Garmin, © OpenStreetMap' }
+        };
+        const EMPTY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+        const HOME_BOUNDS = [[106.33, 10.33], [107.6, 11.52]];
+        const HMAX = 7000;   // chiều cao khối 3D tối đa (m)
+
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#e8eef5' } }] },
+            center: [106.75, 10.9], zoom: 5, maxPitch: 70,
+            preserveDrawingBuffer: true, attributionControl: { compact: true }, dragRotate: false
         });
+        map.touchZoomRotate.disableRotation();
+        map.addControl(new maplibregl.ScaleControl({ maxWidth: 130, unit: 'metric' }), 'bottom-right');
+        const mapLoaded = new Promise(r => map.on('load', r));
+
+        function addBasemap(key) {
+            const b = BASEMAPS[key];
+            const before = map.getLayer('px-a') ? 'px-a' : undefined;
+            for (const id of ['base', 'labels']) { if (map.getLayer(id)) map.removeLayer(id); if (map.getSource(id)) map.removeSource(id); }
+            map.addSource('base', { type: 'raster', tiles: b.base, tileSize: 256, attribution: b.attr, maxzoom: b.maxzoom });
+            map.addLayer({ id: 'base', type: 'raster', source: 'base', paint: { 'raster-fade-duration': 250 } }, before);
+            if (b.labels) {
+                map.addSource('labels', { type: 'raster', tiles: b.labels, tileSize: 256, maxzoom: b.maxzoom });
+                map.addLayer({ id: 'labels', type: 'raster', source: 'labels', paint: { 'raster-opacity': 0.95 }, layout: { visibility: S.view === '3D' ? 'none' : 'visible' } });
+            }
+        }
+
+        function overlayCoords() {
+            const [w, s, e, n] = DATA.overlay.bounds;
+            return [[w, n], [e, n], [e, s], [w, s]];
+        }
+
+        function setupLayers() {
+            addBasemap(S.basemap);
+            const hasPx = !!DATA.overlay;
+            for (const id of ['px-a', 'px-b']) {
+                map.addSource(id, { type: 'image', url: EMPTY_PNG, coordinates: hasPx ? overlayCoords() : [[106, 11], [107, 11], [107, 10], [106, 10]] });
+                map.addLayer({ id, type: 'raster', source: id, paint: { 'raster-opacity': 0, 'raster-opacity-transition': { duration: 550 }, 'raster-resampling': 'nearest', 'raster-fade-duration': 0 } }, map.getLayer('labels') ? 'labels' : undefined);
+            }
+            map.addSource('wards', { type: 'geojson', data: WARDS, promoteId: 'idx' });
+            const colorExpr = ['to-color', ['coalesce', ['feature-state', 'c'], '#e2e8f0']];
+            const beforeLabels = map.getLayer('labels') ? 'labels' : undefined;
+            map.addLayer({
+                id: 'ward-fill', type: 'fill', source: 'wards',
+                paint: { 'fill-color': colorExpr, 'fill-opacity': wardFillOpacity(), 'fill-opacity-transition': { duration: 500 } }
+            }, beforeLabels);
+            map.addLayer({
+                id: 'ward-line', type: 'line', source: 'wards',
+                paint: {
+                    'line-color': ['case', ['boolean', ['feature-state', 'hover'], false], '#0f172a', ['==', ['feature-state', 'm'], 1], '#1e1b4b', 'rgba(255,255,255,0.9)'],
+                    'line-width': ['case', ['boolean', ['feature-state', 'hover'], false], 2.6, ['==', ['feature-state', 'm'], 1], 1.8, 0.6]
+                }
+            }, beforeLabels);
+            map.addLayer({
+                id: 'ward-extrude', type: 'fill-extrusion', source: 'wards', layout: { visibility: 'none' },
+                paint: {
+                    'fill-extrusion-color': ['case', ['boolean', ['feature-state', 'hover'], false], '#fde047', ['boolean', ['feature-state', 'sel'], false], '#f59e0b', colorExpr],
+                    // chiều cao khối giảm dần khi phóng to để không thành "bức tường"
+                    'fill-extrusion-height': ['interpolate', ['exponential', 1.6], ['zoom'],
+                        8, ['*', ['coalesce', ['feature-state', 'h'], 0], 1.5],
+                        10, ['coalesce', ['feature-state', 'h'], 0],
+                        12, ['*', ['coalesce', ['feature-state', 'h'], 0], 0.3],
+                        14, ['*', ['coalesce', ['feature-state', 'h'], 0], 0.08],
+                        16, ['*', ['coalesce', ['feature-state', 'h'], 0], 0.025]],
+                    'fill-extrusion-base': 0, 'fill-extrusion-opacity': 0.93, 'fill-extrusion-vertical-gradient': true
+                }
+            });
+            map.addLayer({ id: 'ward-sel-glow', type: 'line', source: 'wards', filter: ['==', ['get', 'idx'], -1], paint: { 'line-color': '#f59e0b', 'line-width': 9, 'line-blur': 6, 'line-opacity': 0.55 } });
+            map.addLayer({ id: 'ward-sel', type: 'line', source: 'wards', filter: ['==', ['get', 'idx'], -1], paint: { 'line-color': '#b45309', 'line-width': 2.8 } });
+            if (PROVINCE) {
+                map.addSource('province', { type: 'geojson', data: PROVINCE });
+                map.addLayer({ id: 'province-line', type: 'line', source: 'province', paint: { 'line-color': '#0f172a', 'line-width': 1.8, 'line-opacity': 0.85 } });
+            }
+            map.addSource('graticule', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+            map.addLayer({ id: 'graticule', type: 'line', source: 'graticule', paint: { 'line-color': '#334155', 'line-width': 0.7, 'line-opacity': 0.45, 'line-dasharray': [3, 3] } });
+            map.setLight({ anchor: 'viewport', color: '#ffffff', intensity: 0.35, position: [1.3, 200, 35] });
+            bindMapEvents();
+        }
+
+        function wardFillOpacity() {
+            if (S.view === '3D') return 0;
+            // Pixel: phường không thỏa ngưỡng được phủ xám; phường khác gần như trong suốt (vẫn bắt sự kiện chuột)
+            if (S.layer === 'pixel') return ['case', ['==', ['feature-state', 'm'], 0], 0.78, 0.001];
+            return ['case', ['==', ['feature-state', 'm'], 0], 0.45, 0.84];
+        }
+        function applyLayerPaint() {
+            map.setPaintProperty('ward-fill', 'fill-opacity', wardFillOpacity());
+            const pixel = S.layer === 'pixel';
+            map.setPaintProperty('ward-line', 'line-color', ['case', ['boolean', ['feature-state', 'hover'], false], '#0f172a', ['==', ['feature-state', 'm'], 1], '#1e1b4b', pixel ? 'rgba(15,23,42,0.45)' : 'rgba(255,255,255,0.9)']);
+        }
+
+        // ---------- Tween màu + chiều cao (animation chuyển cảnh mượt) ----------
+        const TW = { cur: null, from: null, to: null, delay: null, t0: 0, dur: 0, raf: 0, last: [] };
+        function tweenTo(rgb, h, dur, delay = null) {
+            if (!TW.cur) {
+                TW.cur = { rgb: new Float32Array(N * 3).fill(240), h: new Float32Array(N) };
+                TW.last = new Array(N).fill('');
+            }
+            TW.from = { rgb: TW.cur.rgb.slice(), h: TW.cur.h.slice() };
+            TW.to = { rgb, h }; TW.dur = Math.max(dur, 1); TW.delay = delay; TW.t0 = performance.now();
+            if (!TW.raf) TW.raf = requestAnimationFrame(tweenStep);
+        }
+        function tweenStep(now) {
+            let done = true;
+            for (let i = 0; i < N; i++) {
+                const d = TW.delay ? TW.delay[i] : 0;
+                const p = clamp((now - TW.t0 - d) / TW.dur, 0, 1);
+                if (p < 1) done = false;
+                const e = easeInOut(p);
+                for (let k = 0; k < 3; k++) TW.cur.rgb[i * 3 + k] = TW.from.rgb[i * 3 + k] + (TW.to.rgb[i * 3 + k] - TW.from.rgb[i * 3 + k]) * e;
+                TW.cur.h[i] = TW.from.h[i] + (TW.to.h[i] - TW.from.h[i]) * e;
+                const c = `rgb(${TW.cur.rgb[i * 3] | 0},${TW.cur.rgb[i * 3 + 1] | 0},${TW.cur.rgb[i * 3 + 2] | 0})`;
+                const hh = Math.round(TW.cur.h[i] / 10) * 10;
+                const sig = c + hh;
+                if (sig !== TW.last[i]) { TW.last[i] = sig; map.setFeatureState({ source: 'wards', id: i }, { c, h: hh }); }
+            }
+            TW.raf = done ? 0 : requestAnimationFrame(tweenStep);
+        }
+
+        function updateWardStyle(dur = 600, wave = false) {
+            const V = CUR.V[S.idx], c = CFG[S.idx];
+            const rgb = new Float32Array(N * 3), h = new Float32Array(N);
+            const NODATA = [203, 213, 225], FADE = [226, 232, 240];
+            for (let i = 0; i < N; i++) {
+                let col = colorAt(S.idx, V[i]), hh = 0;
+                if (!col) col = NODATA;
+                else if (S.view === '3D') hh = (0.06 + clamp((V[i] - c.min) / (c.max - c.min), 0, 1)) * HMAX;
+                if (CUR.match[i] === 0) { col = mix(col, FADE, 0.72); hh *= 0.12; }
+                rgb.set(col, i * 3); h[i] = hh;
+                map.setFeatureState({ source: 'wards', id: i }, { m: CUR.match[i] });
+            }
+            let delay = null;
+            if (wave) {
+                const xs = META.map(m => m.c[0] + m.c[1] * 0.6);
+                const lo = Math.min(...xs), hi = Math.max(...xs);
+                delay = xs.map(x => (x - lo) / (hi - lo) * 1100);
+            }
+            tweenTo(rgb, h, dur, delay);
+        }
+
+        // ---------- Lớp ảnh pixel (giải mã PNG 8-bit -> giá trị thật) ----------
+        const imgCache = new Map(), pxCache = new Map();
+        let pxFront = 'px-a', pxToken = 0;
+        const pxUrls = { 'px-a': null, 'px-b': null };
+        function lruSet(m, k, v, max) { m.set(k, v); while (m.size > max) m.delete(m.keys().next().value); }
+
+        async function decodePng(idx, ym) {
+            const key = idx + '|' + ym;
+            if (imgCache.has(key)) return imgCache.get(key);
+            const file = DATA.indices[idx].files?.[ym];
+            if (!file) throw new Error(`Không có ảnh ${idx} ${ym}`);
+            const data = DATA;
+            // ?v= theo thời điểm tạo dữ liệu: sau khi admin xử lý lại, trình duyệt không dùng lại ảnh cũ
+            const src = 'data/' + file + '?v=' + encodeURIComponent(DATA.generated || '');
+            const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Không tải được data/' + file)); i.src = src; });
+            if (data !== DATA) throw new Error('stale');
+            const cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height;
+            const cx = cv.getContext('2d', { willReadFrequently: true });
+            cx.drawImage(im, 0, 0);
+            const d = cx.getImageData(0, 0, cv.width, cv.height).data;
+            const out = new Uint8Array(cv.width * cv.height);
+            for (let i = 0, j = 0; j < out.length; i += 4, j++) out[j] = d[i];
+            if (data === DATA) lruSet(imgCache, key, out, 30);
+            return out;
+        }
+        async function pixelValues(idx, months, tok) {
+            const key = idx + '|' + months.join(',');
+            if (pxCache.has(key)) return pxCache.get(key);
+            const data = DATA;
+            const { width: w, height: h } = DATA.overlay, n = w * h;
+            const [lo, hi] = DATA.indices[idx].encode, sc = (hi - lo) / 254;
+            const sum = new Float32Array(n), cnt = new Uint16Array(n);
+            let k = 0;
+            for (const m of months) {
+                if (tok !== pxToken) throw new Error('stale');   // người dùng đã đổi lựa chọn -> dừng tổng hợp
+                if (months.length > 3) busy(true, `Đang tổng hợp ảnh ${idx}: ${++k}/${months.length}`);
+                const enc = await decodePng(idx, m);
+                for (let i = 0; i < n; i++) { const e = enc[i]; if (e) { sum[i] += lo + (e - 1) * sc; cnt[i]++; } }
+            }
+            const vals = new Float32Array(n);
+            for (let i = 0; i < n; i++) vals[i] = cnt[i] ? sum[i] / cnt[i] : NaN;
+            if (data === DATA) lruSet(pxCache, key, vals, 8);
+            return vals;
+        }
+        const pxCanvas = document.createElement('canvas');
+        function colorizePixels(idx, vals) {
+            const { width: w, height: h } = DATA.overlay;
+            pxCanvas.width = w; pxCanvas.height = h;
+            const cx = pxCanvas.getContext('2d');
+            const img = cx.createImageData(w, h), d = img.data;
+            const c = CFG[idx];
+            const L = 512, lut = new Uint8Array(L * 3);
+            for (let i = 0; i < L; i++) lut.set(colorAt(idx, c.min + (c.max - c.min) * i / (L - 1)), i * 3);
+            const span = c.max - c.min;
+            for (let i = 0, j = 0; i < vals.length; i++, j += 4) {
+                const v = vals[i];
+                if (v !== v) continue;   // NaN -> trong suốt (phường không thỏa ngưỡng được che bằng lớp ward-fill)
+                const t = clamp(Math.round((v - c.min) / span * (L - 1)), 0, L - 1) * 3;
+                d[j] = lut[t]; d[j + 1] = lut[t + 1]; d[j + 2] = lut[t + 2]; d[j + 3] = 235;
+            }
+            cx.putImageData(img, 0, 0);
+            return new Promise(res => pxCanvas.toBlob(b => res(URL.createObjectURL(b)), 'image/png'));
+        }
+        function waitSourceLoaded(id) {
+            return new Promise(res => {
+                const done = () => { clearTimeout(t); map.off('sourcedata', h); res(); };
+                const h = e => { if (e.sourceId === id && e.isSourceLoaded) done(); };
+                const t = setTimeout(done, 900);
+                map.on('sourcedata', h);
+            });
+        }
+        function busy(on, text) {
+            if (text) $('#busyT').textContent = text;
+            $('#busy').hidden = !on;
+        }
+        async function updatePixels() {
+            const tok = ++pxToken;
+            if (S.layer !== 'pixel' || !DATA.overlay || !CUR.M[S.idx].length) {
+                for (const id of ['px-a', 'px-b']) map.setPaintProperty(id, 'raster-opacity', 0);
+                if (CUR) CUR.px = null;
+                busy(false);
+                return;
+            }
+            const months = CUR.M[S.idx];
+            busy(true, `Đang xử lý ảnh pixel ${S.idx}…`);
+            try {
+                const vals = await pixelValues(S.idx, months, tok);
+                if (tok !== pxToken) return;
+                const url = await colorizePixels(S.idx, vals);
+                if (tok !== pxToken) { URL.revokeObjectURL(url); return; }
+                CUR.px = { vals, idx: S.idx };
+                const back = pxFront === 'px-a' ? 'px-b' : 'px-a';
+                const wait = waitSourceLoaded(back);
+                map.getSource(back).updateImage({ url, coordinates: overlayCoords() });
+                await wait;
+                if (pxUrls[back]) URL.revokeObjectURL(pxUrls[back]);
+                pxUrls[back] = url;
+                if (tok !== pxToken) return;
+                map.setPaintProperty(back, 'raster-opacity', 0.93);
+                map.setPaintProperty(pxFront, 'raster-opacity', 0);
+                pxFront = back;
+            } catch (e) {
+                if (e.message !== 'stale') { console.error(e); toast('Lỗi ảnh pixel: ' + e.message, 'err'); }
+            } finally {
+                if (tok === pxToken) busy(false);
+            }
+        }
+        function pixelAt(lngLat) {
+            if (!CUR?.px || !DATA.overlay) return NaN;
+            const [w, s, e, n] = DATA.overlay.bounds;
+            const p = maplibregl.MercatorCoordinate.fromLngLat(lngLat);
+            const nw = maplibregl.MercatorCoordinate.fromLngLat([w, n]), se = maplibregl.MercatorCoordinate.fromLngLat([e, s]);
+            const col = Math.floor((p.x - nw.x) / (se.x - nw.x) * DATA.overlay.width);
+            const row = Math.floor((p.y - nw.y) / (se.y - nw.y) * DATA.overlay.height);
+            if (col < 0 || row < 0 || col >= DATA.overlay.width || row >= DATA.overlay.height) return NaN;
+            return CUR.px.vals[row * DATA.overlay.width + col];
+        }
+
+        // ---------- Lưới toạ độ + khung bản đồ ----------
+        function niceStep(span) {
+            for (const s of [0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5]) if (span / s <= 6) return s;
+            return 10;
+        }
+        function dms(v, isLat) {
+            const hemi = isLat ? (v >= 0 ? 'N' : 'S') : (v >= 0 ? 'E' : 'W');
+            v = Math.abs(v);
+            let d = Math.floor(v), m = Math.round((v - d) * 60);
+            if (m === 60) { d++; m = 0; }
+            return `${d}°${String(m).padStart(2, '0')}'${hemi}`;
+        }
+        function graticuleTicks() {
+            const b = map.getBounds();
+            const sx = niceStep(b.getEast() - b.getWest()), sy = niceStep(b.getNorth() - b.getSouth());
+            const lngs = [], lats = [];
+            for (let x = Math.ceil(b.getWest() / sx) * sx; x <= b.getEast(); x += sx) lngs.push(+x.toFixed(6));
+            for (let y = Math.ceil(b.getSouth() / sy) * sy; y <= b.getNorth(); y += sy) lats.push(+y.toFixed(6));
+            return { b, lngs, lats };
+        }
+        let gridRaf = 0;
+        function scheduleGrid() { if (!gridRaf) gridRaf = requestAnimationFrame(() => { gridRaf = 0; drawGrid(); }); }
+        function drawGrid() {
+            const frame = $('#frame');
+            const show = S.grid && S.view === '2D';
+            if (map.getSource('graticule')) map.setLayoutProperty('graticule', 'visibility', show ? 'visible' : 'none');
+            if (!show) { frame.innerHTML = ''; return; }
+            const { b, lngs, lats } = graticuleTicks();
+            const W = frame.clientWidth, H = frame.clientHeight;
+            const feats = [];
+            lngs.forEach(x => feats.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: [[x, b.getSouth() - 1], [x, b.getNorth() + 1]] } }));
+            lats.forEach(y => feats.push({ type: 'Feature', geometry: { type: 'LineString', coordinates: [[b.getWest() - 1, y], [b.getEast() + 1, y]] } }));
+            map.getSource('graticule')?.setData({ type: 'FeatureCollection', features: feats });
+            let html = '';
+            const cy = (b.getNorth() + b.getSouth()) / 2, cx = (b.getEast() + b.getWest()) / 2;
+            for (const x of lngs) {
+                const px = map.project([x, cy]).x;
+                if (px < 60 || px > W - 60) continue;
+                html += `<span class="tk t" style="left:${px}px">${dms(x, false)}</span><span class="tk b" style="left:${px}px">${dms(x, false)}</span>`;
+                html += `<i class="tick" style="left:${px}px;top:0;width:1px;height:18px"></i><i class="tick" style="left:${px}px;bottom:0;width:1px;height:18px"></i>`;
+            }
+            for (const y of lats) {
+                const py = map.project([cx, y]).y;
+                if (py < 60 || py > H - 60) continue;
+                html += `<span class="tk l" style="top:${py}px;left:-14px">${dms(y, true)}</span><span class="tk r" style="top:${py}px;right:-14px">${dms(y, true)}</span>`;
+                html += `<i class="tick" style="top:${py}px;left:0;height:1px;width:18px"></i><i class="tick" style="top:${py}px;right:0;height:1px;width:18px"></i>`;
+            }
+            frame.innerHTML = html;
+        }
+
+        // ---------- Sự kiện chuột trên bản đồ ----------
+        function bindMapEvents() {
+            map.on('move', () => { scheduleGrid(); $('#northSvg').style.transform = `rotate(${-map.getBearing()}deg)`; });
+            map.on('mousemove', e => {
+                if (!CUR) return;
+                const layer = S.view === '3D' ? 'ward-extrude' : 'ward-fill';
+                const f = map.queryRenderedFeatures(e.point, { layers: [layer] })[0];
+                const i = f ? f.properties.idx : null;
+                if (i !== S.hover) {
+                    if (S.hover != null) map.setFeatureState({ source: 'wards', id: S.hover }, { hover: false });
+                    if (i != null) map.setFeatureState({ source: 'wards', id: i }, { hover: true });
+                    S.hover = i;
+                }
+                map.getCanvas().style.cursor = i != null ? 'pointer' : '';
+                const pv = S.layer === 'pixel' ? pixelAt(e.lngLat) : NaN;
+                $('#roXY').textContent = `${dms(e.lngLat.lat, true)} ${e.lngLat.lat.toFixed(4)}° · ${dms(e.lngLat.lng, false)} ${e.lngLat.lng.toFixed(4)}°`;
+                const shown = isFinite(pv) ? pv : (i != null ? CUR.V[S.idx][i] : NaN);
+                $('#roVal').innerHTML = isFinite(shown)
+                    ? `<span style="color:${rgbStr(colorAt(S.idx, shown))};text-shadow:0 0 1px #0006">■</span> ${S.idx} ${isFinite(pv) ? 'tại điểm' : 'TB phường'}: ${fmtU(S.idx, shown)}`
+                    : '—';
+                legendMarker(shown);
+                showTip(e.point, i, pv);
+            });
+            map.getCanvas().addEventListener('mouseleave', () => {
+                if (S.hover != null) map.setFeatureState({ source: 'wards', id: S.hover }, { hover: false });
+                S.hover = null; $('#tip').hidden = true; legendMarker(NaN);
+            });
+            map.on('click', e => {
+                if (!CUR) return;
+                const layer = S.view === '3D' ? 'ward-extrude' : 'ward-fill';
+                const f = map.queryRenderedFeatures(e.point, { layers: [layer] })[0];
+                if (f) selectWard(f.properties.idx, false);
+            });
+        }
+
+        function showTip(pt, i, pv) {
+            const tip = $('#tip');
+            if (i == null) { tip.hidden = true; return; }
+            const m = META[i];
+            let rows = '';
+            for (const k of IDX) {
+                const v = CUR.V[k][i], r = CUR.rank[k];
+                rows += `<div class="r"><span style="${k === S.idx ? 'color:#fff;font-weight:700' : ''}">${k}</span><span class="mono">${fmtU(k, v)} <small style="color:#94a3b8">#${r.r[i] || '–'}/${r.n}</small></span></div>`;
+            }
+            if (isFinite(pv)) rows += `<div class="r" style="border-top:1px solid #334155;margin-top:3px;padding-top:4px"><span>Pixel tại chuột</span><span class="mono">${fmtU(S.idx, pv)}</span></div>`;
+            const v = isFinite(pv) ? pv : CUR.V[S.idx][i];
+            const cls = classOf(S.idx, v);
+            tip.innerHTML = `<h4>${esc(m.name)}</h4>${rows}${cls ? `<span class="cls" style="background:${colorAt(S.idx, v) ? rgbStr(colorAt(S.idx, v)) + '55' : ''}">${S.idx}: ${cls}</span>` : ''}
+                ${CUR.match[i] === 1 ? '<div style="margin-top:5px;color:#a5b4fc;font-weight:700"><i class="fa-solid fa-check"></i> Thỏa điều kiện lọc</div>' : ''}`;
+            tip.hidden = false;
+            const W = $('#mapwrap').clientWidth, H = $('#mapwrap').clientHeight;
+            const x = pt.x + 240 > W ? pt.x - 250 : pt.x, y = pt.y + 170 > H ? pt.y - 170 : pt.y;
+            tip.style.left = x + 'px'; tip.style.top = y + 'px';
+        }
+
+        // =====================================================================
+        // 7. CẬP NHẬT GIAO DIỆN
+        // =====================================================================
+        function refresh(opts = {}) {
+            if (!DATA || !map.getSource('wards')) return;
+            computeAll();
+            updateWardStyle(opts.dur ?? 600, opts.wave);
+            if (!opts.skipPixels) updatePixels();
+            renderLegend();
+            renderTitle(opts.titleAnim);
+            renderResultChip();
+            renderRank();
+            renderTimelineNow();
+            renderRight();
+        }
+
+        function renderTitle(anim) {
+            const c = CFG[S.idx];
+            $('#mapTitleH').textContent = `BẢN ĐỒ ${c.title} TP. HỒ CHÍ MINH`;
+            $('#mapTitleP').innerHTML = `${ctxLabel()} · ${S.layer === 'pixel' ? 'ảnh pixel ~120 m' : 'giá trị trung bình phường/xã'}`;
+            if (anim) for (const el of [$('#mapTitleH'), $('#mapTitleP')]) { el.classList.remove('swap-anim'); void el.offsetWidth; el.classList.add('swap-anim'); }
+        }
+
+        function renderLegend() {
+            const c = CFG[S.idx];
+            $('#legTitle').textContent = `${S.idx}${c.unit ? ' (' + c.unit + ')' : ''} – ${c.desc}`;
+            $('#legSub').textContent = S.layer === 'pixel' ? 'giá trị pixel' : 'TB phường/xã';
+            $('#legBar').style.background = gradientCss(S.idx);
+            $('#legTicks').innerHTML = niceTicks(c.min, c.max).map(v => `<span style="left:${(v - c.min) / (c.max - c.min) * 100}%">${+v.toFixed(2)}</span>`).join('');
+            $('#legLow').textContent = '◀ ' + c.lowTxt;
+            $('#legHigh').textContent = c.highTxt + ' ▶';
+            let ex = `<span><i class="sw" style="background:#cbd5e1"></i>Không có dữ liệu</span>`;
+            if (CUR?.anyF) ex = `<span><i class="sw" style="background:#e2e8f0"></i>Không thỏa ngưỡng</span><span><i class="sw" style="background:#fff;border:2px solid #1e1b4b"></i>Thỏa ngưỡng</span>` + ex;
+            $('#legExtra').innerHTML = ex;
+        }
+        function legendMarker(v) {
+            const mk = $('#legMarker');
+            if (!isFinite(v)) { mk.style.opacity = 0; return; }
+            const c = CFG[S.idx];
+            mk.style.left = clamp((v - c.min) / (c.max - c.min), 0, 1) * 100 + '%';
+            mk.style.opacity = 1;
+            $('#legMarkerV').textContent = fmt(S.idx, v);
+        }
+
+        // ---------- Ngưỡng ----------
+        function buildThresholds() {
+            $('#thrBox').innerHTML = IDX.map(k => {
+                const t = CFG[k].thr, f = S.filters[k];
+                return `<div class="thr ${f.on ? 'on' : ''}" data-k="${k}">
+                    <label class="switch"><input type="checkbox" class="on" ${f.on ? 'checked' : ''}><span></span></label>
+                    <span class="tag ${k}">${k}</span>
+                    <select class="op"><option value=">" ${f.op === '>' ? 'selected' : ''}>&gt;</option><option value="<" ${f.op === '<' ? 'selected' : ''}>&lt;</option></select>
+                    <input type="number" class="val" step="${t.step}" value="${f.val}">
+                    <span class="unit">${CFG[k].unit || '&nbsp;'}</span>
+                    <input type="range" class="rng" min="${t.min}" max="${t.max}" step="${t.step}" value="${f.val}">
+                </div>`;
+            }).join('');
+            $$('#thrBox .thr').forEach(row => {
+                const k = row.dataset.k, f = S.filters[k];
+                const upd = () => { row.classList.toggle('on', f.on); refreshDebounced(); };
+                $('.on', row).addEventListener('change', e => { f.on = e.target.checked; upd(); });
+                $('.op', row).addEventListener('change', e => { f.op = e.target.value; if (!f.on) { f.on = true; $('.on', row).checked = true; } upd(); });
+                $('.val', row).addEventListener('input', e => { const v = parseFloat(e.target.value); if (isFinite(v)) { f.val = v; $('.rng', row).value = v; if (!f.on) { f.on = true; $('.on', row).checked = true; } upd(); } });
+                $('.rng', row).addEventListener('input', e => { f.val = parseFloat(e.target.value); $('.val', row).value = f.val; if (!f.on) { f.on = true; $('.on', row).checked = true; } upd(); });
+            });
+        }
+        // đổi ngưỡng chỉ cần tô lại phường (ảnh pixel không phụ thuộc ngưỡng)
+        function refreshDebounced() {
+            computeAll(); updateWardStyle(300); renderLegend(); renderResultChip(); renderRank(); renderRight();
+        }
+        function renderResultChip() {
+            const el = $('#resultChip');
+            if (!CUR.anyF) { el.hidden = true; return; }
+            const conds = IDX.filter(k => S.filters[k].on).map(k => `<b style="font-size:12px">${k} ${S.filters[k].op} ${S.filters[k].val}${CFG[k].unit ? ' ' + CFG[k].unit : ''}</b>`).join(' VÀ ');
+            el.innerHTML = `<i class="fa-solid fa-bullseye"></i> Có <b>${CUR.nMatch}</b>/${CUR.rank[S.idx].n} phường/xã thỏa: ${conds}`;
+            el.hidden = false;
+        }
+
+        // ---------- Danh sách xếp hạng (có hiệu ứng FLIP khi đổi thứ tự) ----------
+        function renderRank() {
+            const k = S.sortBy, V = CUR.V;
+            const q = fold(S.search);
+            let ids = [...Array(N).keys()].filter(i => isFinite(V[k][i]));
+            ids.sort((a, b) => S.sortDir === 'desc' ? V[k][b] - V[k][a] : V[k][a] - V[k][b]);
+            const total = ids.length;
+            const rankOf = new Map(ids.map((i, j) => [i, j + 1]));
+            if (S.onlyMatch && CUR.anyF) ids = ids.filter(i => CUR.match[i] === 1);
+            if (q) ids = ids.filter(i => META[i].key.includes(q));
+            $('#rankCount').textContent = total;
+            $$('#rankHead button').forEach(b => {
+                const s = b.dataset.sort;
+                b.classList.toggle('on', s === k);
+                b.textContent = `${s} ${s === k ? (S.sortDir === 'desc' ? '↓' : '↑') : sortDirTxt(s)}`;
+            });
+            const list = $('#rankList');
+            const before = new Map();
+            list.querySelectorAll('.rank-row').forEach(r => before.set(r.dataset.i, r.getBoundingClientRect().top));
+            const cell = (kk, i) => {
+                const v = V[kk][i], col = colorAt(kk, v);
+                return `<span class="c mono ${kk === k ? 'on' : ''}" style="background:${col ? `rgba(${col[0]},${col[1]},${col[2]},.30)` : '#f1f5f9'}">${fmt(kk, v).replace(/^(-?)0\./, '$1.')}</span>`;
+            };
+            list.innerHTML = ids.length ? ids.map(i => {
+                const m = META[i], mt = CUR.match[i], rk = rankOf.get(i);
+                return `<div class="rank-row ${S.selected === i ? 'sel' : ''} ${mt === 1 ? 'match' : ''} ${mt === 0 ? 'dim' : ''}" data-i="${i}">
+                    <span class="rk ${rk <= 3 ? 'top' : ''}">${rk}</span>
+                    <span class="nm"><b title="${esc(m.name)}">${esc(m.ten_xa)}</b><small>${esc(m.loai)}</small></span>
+                    ${cell('LST', i)}${cell('NDVI', i)}${cell('TVDI', i)}
+                </div>`;
+            }).join('') : `<div class="empty"><i class="fa-solid fa-magnifying-glass"></i>Không có phường/xã phù hợp</div>`;
+            // FLIP
+            list.querySelectorAll('.rank-row').forEach(r => {
+                const old = before.get(r.dataset.i);
+                if (old == null) return;
+                const dy = old - r.getBoundingClientRect().top;
+                if (Math.abs(dy) < 1) return;
+                r.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 550, easing: 'cubic-bezier(.2,.8,.2,1)' });
+            });
+        }
+
+        // ---------- Timeline / animation ----------
+        function buildFrames(keep) {
+            const ms = (DATA.indices[S.idx].months || []).filter(m => m >= S.from && m <= S.to);
+            const prev = keep ? S.frames[S.frameI] : null;
+            S.frames = S.mode === 'year' ? [...new Set(ms.map(m => m.slice(0, 4)))] : ms;
+            if (prev && S.frames.length) {
+                if (S.mode === 'year') S.frameI = Math.max(0, S.frames.indexOf(String(prev).slice(0, 4)));
+                else {
+                    let best = 0, bd = 1e9;
+                    S.frames.forEach((f, j) => { const d = Math.abs(monthDiff(prev.length === 4 ? prev + '-06' : prev, f)); if (d < bd) { bd = d; best = j; } });
+                    S.frameI = best;
+                }
+            } else S.frameI = clamp(S.frameI, 0, Math.max(0, S.frames.length - 1));
+            const r = $('#tlRange');
+            r.max = Math.max(0, S.frames.length - 1); r.value = S.frameI;
+            // nhãn năm dưới thanh trượt
+            const yrs = {};
+            S.frames.forEach((f, j) => { const y = String(f).slice(0, 4); if (!(y in yrs)) yrs[y] = j; });
+            const n = Math.max(1, S.frames.length - 1);
+            $('#tlYears').innerHTML = Object.entries(yrs).map(([y, j]) => `<span style="left:${j / n * 100}%">${S.mode === 'year' ? y : "'" + y.slice(2)}</span>`).join('');
+        }
+        function renderTimelineNow() {
+            const c = CUR.c;
+            const now = $('#tlNow'), sub = $('#tlSub');
+            if (c.type === 'period') { now.textContent = `${S.from.slice(0, 4)}–${S.to.slice(0, 4)}`; sub.textContent = `TB giai đoạn · ${CUR.M[S.idx].length} ảnh ${S.idx}`; }
+            else if (c.type === 'year') { now.textContent = `Năm ${c.year}`; sub.textContent = `Khung ${S.frameI + 1}/${S.frames.length} · ${CUR.M[S.idx].length} ảnh`; }
+            else { now.textContent = ymLabel(c.ym); sub.textContent = `Khung ${S.frameI + 1}/${S.frames.length}`; }
+            $('#tlRange').value = S.frameI;
+        }
+        function setMode(mode) {
+            S.mode = mode;
+            $$('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+            buildFrames(true);
+            refresh({ titleAnim: true });
+        }
+        function gotoFrame(i, dur) {
+            if (!S.frames.length) return;
+            if (S.mode === 'period') { S.mode = 'month'; $$('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === 'month')); buildFrames(false); }
+            S.frameI = (i + S.frames.length) % S.frames.length;
+            refresh({ dur: dur ?? 500, titleAnim: true });
+        }
+        let playTok = 0;
+        async function play() {
+            if (S.playing) return stop();
+            if (S.mode === 'period') { S.mode = 'month'; $$('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === 'month')); buildFrames(false); S.frameI = 0; refresh({ titleAnim: true }); }
+            if (S.frames.length < 2) { toast('Khoảng thời gian chỉ có 1 khung – hãy chọn khoảng rộng hơn.', 'info'); return; }
+            S.playing = true; const tok = ++playTok;
+            $('#tlPlay').classList.add('playing'); $('#tlPlay').innerHTML = '<i class="fa-solid fa-pause"></i>';
+            logAct(`Chạy animation ${S.idx} ${S.mode}`);
+            while (S.playing && tok === playTok) {
+                await sleep(S.speed);
+                if (!S.playing || tok !== playTok) break;
+                if (S.frameI >= S.frames.length - 1 && !S.loop) { stop(); break; }
+                S.frameI = (S.frameI + 1) % S.frames.length;
+                refresh({ dur: Math.min(700, S.speed * 0.6), titleAnim: true });
+            }
+        }
+        function stop() {
+            S.playing = false; playTok++;
+            $('#tlPlay').classList.remove('playing'); $('#tlPlay').innerHTML = '<i class="fa-solid fa-play"></i>';
+        }
+
+        // ---------- Chọn phường ----------
+        function selectWard(i, fly = true) {
+            if (!CUR || !map.getLayer('ward-sel')) return;
+            if (S.selected != null) map.setFeatureState({ source: 'wards', id: S.selected }, { sel: false });
+            if (i != null) map.setFeatureState({ source: 'wards', id: i }, { sel: true });
+            S.selected = i;
+            const f = ['==', ['get', 'idx'], i == null ? -1 : i];
+            map.setFilter('ward-sel', f); map.setFilter('ward-sel-glow', f);
+            if (i != null && fly) {
+                const b = META[i].bbox;
+                map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: { top: 120, bottom: 120, left: 120, right: 120 }, maxZoom: 13.5, duration: 1400, pitch: S.view === '3D' ? 55 : 0, bearing: S.view === '3D' ? map.getBearing() : 0 });
+            }
+            if (i != null) { setTab('ward'); if (window.innerWidth <= 1100) $('#layout').classList.add('show-right'); }
+            $$('#rankList .rank-row').forEach(r => r.classList.toggle('sel', +r.dataset.i === i));
+            const row = $(`#rankList .rank-row[data-i="${i}"]`);
+            row?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            renderRight();
+        }
+
+        // =====================================================================
+        // 8. PANEL PHẢI: CHI TIẾT + THỐNG KÊ (Chart.js)
+        // =====================================================================
+        Chart.defaults.font.family = "'Be Vietnam Pro', system-ui, sans-serif";
+        Chart.defaults.font.size = 10.5;
+        Chart.defaults.color = '#64748b';
+        let wardChart = null, histChart = null, scatChart = null;
+        let wardKey = null, statsKey = null;
+        const plainCtx = () => ctxLabel().replace(/<\/?b>/g, '');
+
+        function setTab(t) {
+            S.tab = t;
+            $$('#rTabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+            $('#tabWard').hidden = t !== 'ward'; $('#tabStats').hidden = t !== 'stats';
+            renderRight();
+        }
+        function renderRight() {
+            if (!CUR) return;
+            if (S.tab === 'ward') renderWardTab(); else renderStatsTab();
+        }
+        function animateIn(el) { el.classList.remove('anim'); void el.offsetWidth; el.classList.add('anim'); }
+
+        function kpiCard(k, i) {
+            const v = i == null ? statsOf(k).mean : CUR.V[k][i];
+            const col = colorAt(k, v);
+            const r = CUR.rank[k];
+            const sub = i == null ? `TB ${r.n} phường/xã` : `Hạng ${r.r[i] || '–'}/${r.n} · ${classOf(k, v)}`;
+            return `<div class="kpi ${k === S.idx ? 'on' : ''}" data-k="${k}" title="Bấm để xem bản đồ ${k}">
+                <div class="k tag ${k}"><i class="fa-solid ${CFG[k].icon}"></i> ${k}</div>
+                <div class="v mono">${fmt(k, v)}<small style="font-size:10px;color:var(--muted)"> ${CFG[k].unit}</small></div>
+                <div class="s">${sub}</div>
+                <div class="bar" style="width:100%;background:${col ? rgbStr(col) : '#e2e8f0'}"></div></div>`;
+        }
+
+        // ---------- Tab Phường/Xã ----------
+        function renderWardTab() {
+            const el = $('#tabWard'), i = S.selected, key = `${i}|${S.idx}`;
+            if (key !== wardKey || !$('#wardChart')) {
+                wardKey = key;
+                if (i == null) {
+                    el.innerHTML = `<div class="sub-h" style="margin-top:0">Toàn TP.HCM <span id="wardCtx"></span></div>
+                        <div class="kpis" id="wardKpis"></div><div id="wardMatch"></div>
+                        <div class="sub-h">Diễn biến ${S.idx} toàn vùng <span>TB và khoảng P5–P95</span></div>
+                        <div class="chart-box"><canvas id="wardChart"></canvas></div>
+                        <div class="empty" style="padding:18px 6px"><i class="fa-solid fa-hand-pointer"></i>Bấm vào một phường/xã trên bản đồ hoặc trong bảng xếp hạng để xem chi tiết</div>`;
+                } else {
+                    const m = META[i];
+                    el.innerHTML = `<div class="ward-h"><div class="ic"><i class="fa-solid fa-location-dot"></i></div>
+                        <div style="flex:1;min-width:0"><h3>${esc(m.name)}</h3><p>Mã: ${esc(m.ma_xa)} · <span id="wardCtx"></span></p></div>
+                        <button class="icon-btn" id="btnUnsel" title="Bỏ chọn"><i class="fa-solid fa-xmark"></i></button></div>
+                        <div class="kpis" id="wardKpis"></div><div id="wardMatch"></div>
+                        <div class="sub-h">Diễn biến ${S.idx} theo tháng <span>phường vs. toàn vùng</span></div>
+                        <div class="chart-box"><canvas id="wardChart"></canvas></div>
+                        <table class="info-t">
+                            <tr><td>Diện tích</td><td>${m.dtich_km2 ?? '–'} km²</td></tr>
+                            <tr><td>Dân số</td><td>${fmtInt(m.dan_so)} người</td></tr>
+                            <tr><td>Mật độ</td><td>${fmtInt(m.matdo_km2)} người/km²</td></tr>
+                            <tr><td>Trụ sở UBND</td><td>${esc(m.tru_so || '–')}</td></tr>
+                            <tr><td>Sáp nhập từ</td><td>${esc(m.sap_nhap || '–')}</td></tr>
+                            <tr><td>Số pixel 30 m</td><td>${fmtInt(DATA.wards[i].pixels)}</td></tr>
+                        </table>`;
+                    $('#btnUnsel').onclick = () => selectWard(null);
+                }
+                animateIn(el);
+                buildWardChart(i);
+            }
+            $('#wardCtx').textContent = plainCtx();
+            $('#wardKpis').innerHTML = IDX.map(k => kpiCard(k, i)).join('');
+            $$('#wardKpis .kpi').forEach(k => k.onclick = () => setIndex(k.dataset.k));
+            $('#wardMatch').innerHTML = i != null && CUR.match[i] === 1
+                ? '<div class="result-chip" style="margin:0 0 8px"><i class="fa-solid fa-check"></i> Phường/xã này <b style="font-size:12px">thỏa điều kiện lọc</b></div>' : '';
+            // làm nổi các tháng đang được dùng trên biểu đồ
+            if (wardChart) {
+                const inCtx = new Set(CUR.M[S.idx]);
+                wardChart.data.datasets[0].pointRadius = DATA.indices[S.idx].months.map(m => inCtx.has(m) ? 3.5 : 0);
+                wardChart.update();
+            }
+        }
+
+        function buildWardChart(i) {
+            const k = S.idx, ms = DATA.indices[k].months;
+            const city = ms.map(m => DATA.series[k][m].city?.mean ?? null);
+            const col = CFG[k].color;
+            const ds = [];
+            if (i != null) ds.push({ label: META[i].ten_xa, data: ms.map(m => DATA.series[k][m].mean[i]), borderColor: col, backgroundColor: col + '22', fill: true, tension: .3, borderWidth: 2, spanGaps: true, pointRadius: 0, pointBackgroundColor: col });
+            ds.push({ label: 'TB toàn vùng', data: city, borderColor: i != null ? '#64748b' : col, borderDash: i != null ? [4, 3] : [], borderWidth: i != null ? 1.5 : 2, tension: .3, pointRadius: 0, pointBackgroundColor: col, fill: false, spanGaps: true });
+            if (i == null) {
+                ds.push({ label: 'P95', data: ms.map(m => DATA.series[k][m].city?.p95 ?? null), borderWidth: 0, pointRadius: 0, backgroundColor: col + '1f', fill: '+1', tension: .3 });
+                ds.push({ label: 'P05', data: ms.map(m => DATA.series[k][m].city?.p05 ?? null), borderWidth: 0, pointRadius: 0, fill: false, tension: .3 });
+            }
+            if (wardChart) wardChart.destroy();
+            wardChart = new Chart($('#wardChart'), {
+                type: 'line', data: { labels: ms.map(m => ymLabel(m).replace('/20', '/')), datasets: ds },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 500 }, interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: true, labels: { boxWidth: 10, filter: it => !['P95', 'P05'].includes(it.text) } }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmtU(k, c.parsed.y)}` } } },
+                    scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }, y: { grid: { color: '#f1f5f9' }, title: { display: true, text: k + (CFG[k].unit ? ` (${CFG[k].unit})` : '') } } }
+                }
+            });
+        }
+
+        function statsOf(k) {
+            const V = CUR.V[k], vals = [];
+            let mn = Infinity, mx = -Infinity, imn = -1, imx = -1;
+            for (let i = 0; i < N; i++) { const v = V[i]; if (!isFinite(v)) continue; vals.push(v); if (v < mn) { mn = v; imn = i; } if (v > mx) { mx = v; imx = i; } }
+            const mean = vals.reduce((a, b) => a + b, 0) / (vals.length || 1);
+            const sd = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / (vals.length || 1));
+            return { n: vals.length, mn, mx, imn, imx, mean: vals.length ? mean : NaN, sd, city: cityMean(k, CUR.M[k]) };
+        }
+
+        // ---------- Tab Thống kê ----------
+        function renderStatsTab() {
+            const el = $('#tabStats'), k = S.idx;
+            if (k !== statsKey || !$('#histChart')) {
+                statsKey = k;
+                el.innerHTML = `<div class="sub-h" style="margin-top:0">Thống kê ${k} theo phường/xã <span id="stCtx"></span></div>
+                    <div class="stat-grid">
+                        <div class="stat"><div class="k">Nhỏ nhất (Min)</div><div class="v mono" style="color:#2563eb" id="stMin">–</div><div class="n" id="stMinN"></div></div>
+                        <div class="stat"><div class="k">Lớn nhất (Max)</div><div class="v mono" style="color:#dc2626" id="stMax">–</div><div class="n" id="stMaxN"></div></div>
+                        <div class="stat"><div class="k">Trung bình phường</div><div class="v mono" style="color:#059669" id="stMean">–</div><div class="n" id="stCity"></div></div>
+                        <div class="stat"><div class="k">Độ lệch chuẩn (SD)</div><div class="v mono" style="color:#7c3aed" id="stSd">–</div><div class="n" id="stN"></div></div>
+                    </div>
+                    <div id="stMatch"></div>
+                    <div class="sub-h">Phân bố ${k} <span>số phường/xã mỗi khoảng giá trị</span></div>
+                    <div class="chart-box" style="height:160px"><canvas id="histChart"></canvas></div>
+                    <div class="sub-h">Tương quan NDVI – LST <span id="corrR"></span></div>
+                    <div class="chart-box" style="height:210px"><canvas id="scatChart"></canvas></div>`;
+                animateIn(el);
+                if (histChart) histChart.destroy();
+                histChart = new Chart($('#histChart'), {
+                    type: 'bar',
+                    data: { labels: [], datasets: [{ label: 'Số phường/xã', data: [], borderRadius: 4 }, { label: 'Thỏa ngưỡng', data: [], backgroundColor: 'rgba(30,27,75,.75)', borderRadius: 4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 600 }, plugins: { legend: { labels: { boxWidth: 10 } } }, scales: { x: { grid: { display: false } }, y: { grid: { color: '#f1f5f9' }, ticks: { precision: 0 } } } }
+                });
+                if (scatChart) scatChart.destroy();
+                scatChart = new Chart($('#scatChart'), {
+                    type: 'scatter',
+                    data: { datasets: [{ label: 'Phường/xã (màu = TVDI)', data: [] }, { label: 'Hồi quy tuyến tính', type: 'line', data: [], borderColor: '#0f172a', borderDash: [5, 4], borderWidth: 1.4, pointRadius: 0 }] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, animation: { duration: 600 },
+                        onClick: (e, els) => { const el0 = els.find(x => x.datasetIndex === 0); if (el0) selectWard(scatChart.data.datasets[0].data[el0.index].i); },
+                        plugins: { legend: { labels: { boxWidth: 10 } }, tooltip: { filter: c => c.datasetIndex === 0, callbacks: { label: c => `${META[c.raw.i].name}: NDVI ${c.raw.x.toFixed(3)}, LST ${c.raw.y.toFixed(2)} °C` } } },
+                        scales: { x: { title: { display: true, text: 'NDVI' }, grid: { color: '#f1f5f9' } }, y: { title: { display: true, text: 'LST (°C)' }, grid: { color: '#f1f5f9' } } }
+                    }
+                });
+            }
+            updateStats();
+        }
+
+        function updateStats() {
+            const k = S.idx, st = statsOf(k), d = CFG[k].dec;
+            $('#stCtx').textContent = plainCtx();
+            animateNumber($('#stMin'), st.mn, d); animateNumber($('#stMax'), st.mx, d);
+            animateNumber($('#stMean'), st.mean, d); animateNumber($('#stSd'), st.sd, d);
+            $('#stMinN').textContent = st.imn >= 0 ? META[st.imn].name : '';
+            $('#stMaxN').textContent = st.imx >= 0 ? META[st.imx].name : '';
+            $('#stCity').textContent = `TB pixel toàn vùng: ${fmtU(k, st.city)}`;
+            $('#stN').textContent = `${st.n} phường/xã có dữ liệu`;
+            $('#stMatch').innerHTML = CUR.anyF ? `<div class="result-chip"><i class="fa-solid fa-bullseye"></i> <b>${CUR.nMatch}</b> phường/xã thỏa ngưỡng (${(CUR.nMatch / Math.max(st.n, 1) * 100).toFixed(1)}%)</div>` : '';
+            // Histogram theo khoảng giá trị của thang màu
+            const c = CFG[k], bins = 12, lo = Math.min(c.min, st.mn), hi = Math.max(c.max, st.mx);
+            const w = (hi - lo) / bins, cnt = new Array(bins).fill(0), cntM = new Array(bins).fill(0);
+            for (let i = 0; i < N; i++) { const v = CUR.V[k][i]; if (!isFinite(v)) continue; const b = clamp(Math.floor((v - lo) / w), 0, bins - 1); cnt[b]++; if (CUR.match[i] === 1) cntM[b]++; }
+            histChart.data.labels = cnt.map((_, b) => (lo + w * (b + .5)).toFixed(d > 2 ? 2 : 1));
+            histChart.data.datasets[0].data = cnt;
+            histChart.data.datasets[0].backgroundColor = cnt.map((_, b) => rgbStr(colorAt(k, lo + w * (b + .5))));
+            histChart.data.datasets[1].data = cntM;
+            histChart.data.datasets[1].hidden = !CUR.anyF;
+            histChart.options.plugins.legend.display = CUR.anyF;
+            histChart.update();
+            // Scatter NDVI – LST, màu điểm theo TVDI
+            const pts = [];
+            for (let i = 0; i < N; i++) { const x = CUR.V.NDVI[i], y = CUR.V.LST[i]; if (isFinite(x) && isFinite(y)) pts.push({ x, y, i }); }
+            let r = NaN, a = 0, b = 0;
+            if (pts.length > 2) {
+                const mx = pts.reduce((s, p) => s + p.x, 0) / pts.length, my = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+                let sxy = 0, sxx = 0, syy = 0;
+                for (const p of pts) { sxy += (p.x - mx) * (p.y - my); sxx += (p.x - mx) ** 2; syy += (p.y - my) ** 2; }
+                r = sxy / Math.sqrt(sxx * syy); b = sxy / sxx; a = my - b * mx;
+            }
+            $('#corrR').textContent = isFinite(r) ? `r = ${r.toFixed(3)} · LST = ${a.toFixed(1)} ${b < 0 ? '−' : '+'} ${Math.abs(b).toFixed(1)}·NDVI` : '';
+            const ds = scatChart.data.datasets[0];
+            ds.data = pts;
+            ds.pointRadius = pts.map(p => p.i === S.selected ? 7 : 3.5);
+            ds.pointBackgroundColor = pts.map(p => { const c2 = colorAt('TVDI', CUR.V.TVDI[p.i]); return c2 ? rgbStr(c2) : '#cbd5e1'; });
+            ds.pointBorderColor = pts.map(p => p.i === S.selected ? '#0f172a' : 'rgba(15,23,42,.35)');
+            ds.pointBorderWidth = pts.map(p => p.i === S.selected ? 2 : .6);
+            const xs = pts.map(p => p.x), x0 = Math.min(...xs), x1 = Math.max(...xs);
+            scatChart.data.datasets[1].data = isFinite(r) ? [{ x: x0, y: a + b * x0 }, { x: x1, y: a + b * x1 }] : [];
+            scatChart.update();
+        }
+
+        // =====================================================================
+        // 9. ĐIỀU KHIỂN: chỉ số, 2D/3D, lớp, nền, thời gian
+        // =====================================================================
+        function setIndex(k) {
+            if (k === S.idx) return;
+            S.idx = k; S.sortBy = k; S.sortDir = CFG[k].order;
+            $$('#idxSeg button').forEach(b => b.classList.toggle('on', b.dataset.idx === k));
+            buildFrames(true);
+            refresh({ dur: 800, titleAnim: true });
+        }
+
+        let viewTimer = 0;
+        function setView(v) {
+            if (v === S.view) return;
+            S.view = v;
+            clearTimeout(viewTimer);   // huỷ bước dọn dẹp của lần chuyển 2D trước (nếu bấm liên tục)
+            $$('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+            $('#mapcard').classList.toggle('is3d', v === '3D');
+            if (v === '3D') {
+                map.dragRotate.enable(); map.touchZoomRotate.enableRotation();
+                map.setLayoutProperty('ward-extrude', 'visibility', 'visible');
+                if (map.getLayer('labels')) map.setLayoutProperty('labels', 'visibility', 'none');
+                map.easeTo({ pitch: 58, bearing: -20, duration: 1800, easing: easeInOut });
+            } else {
+                map.easeTo({ pitch: 0, bearing: 0, duration: 1400, easing: easeInOut });
+                viewTimer = setTimeout(() => {
+                    if (S.view !== '2D') return;
+                    map.setLayoutProperty('ward-extrude', 'visibility', 'none');
+                    if (map.getLayer('labels')) map.setLayoutProperty('labels', 'visibility', 'visible');
+                    map.dragRotate.disable(); map.touchZoomRotate.disableRotation();
+                }, 1300);
+            }
+            applyLayerPaint();
+            updateWardStyle(v === '3D' ? 1600 : 1100);
+            scheduleGrid();
+            logAct('Chuyển chế độ ' + v);
+        }
+
+        function setLayer(l) {
+            if (l === 'pixel' && !DATA.overlay) { toast('Dữ liệu chưa có ảnh pixel. Hãy chạy lại script không kèm --no-raster.', 'err'); return; }
+            S.layer = l;
+            $$('#layerSeg button').forEach(b => b.classList.toggle('on', b.dataset.layer === l));
+            applyLayerPaint();
+            refresh({ titleAnim: true });
+        }
+
+        function fillMonthSelects() {
+            const opts = ALL_MONTHS.map(m => `<option value="${m}">${ymLabel(m)}</option>`).join('');
+            $('#fromSel').innerHTML = opts; $('#toSel').innerHTML = opts;
+            $('#fromSel').value = S.from; $('#toSel').value = S.to;
+        }
+        function onRangeChange() {
+            let a = $('#fromSel').value, b = $('#toSel').value;
+            if (a > b) { [a, b] = [b, a]; $('#fromSel').value = a; $('#toSel').value = b; }
+            S.from = a; S.to = b;
+            stop(); buildFrames(true); refresh({ titleAnim: true });
+        }
+
+        function flyHome(dur = 1600) {
+            map.fitBounds(HOME_BOUNDS, { padding: { top: 90, bottom: 60, left: 40, right: 90 }, duration: dur, pitch: S.view === '3D' ? 58 : 0, bearing: S.view === '3D' ? -20 : 0 });
+        }
+
+        let tourTok = 0;
+        async function tour() {
+            if (S.touring) { S.touring = false; tourTok++; $('#btnTour').classList.remove('on'); return; }
+            S.touring = true; $('#btnTour').classList.add('on');
+            const tok = ++tourTok;
+            const k = S.idx, V = CUR.V[k];
+            const ids = [...Array(N).keys()].filter(i => isFinite(V[i])).sort((a, b) => CFG[k].order === 'desc' ? V[b] - V[a] : V[a] - V[b]).slice(0, 5);
+            toast(`Trình diễn: 5 phường/xã ${k === 'NDVI' ? 'ít cây xanh nhất' : k === 'LST' ? 'nóng nhất' : 'khô hạn nhất'}`, 'info');
+            for (const i of ids) {
+                if (tok !== tourTok) return;
+                selectWard(i, false);
+                const b = META[i].bbox;
+                map.fitBounds([[b[0], b[1]], [b[2], b[3]]], { padding: 160, maxZoom: 13, duration: 2600, pitch: S.view === '3D' ? 60 : 0, bearing: S.view === '3D' ? map.getBearing() + 35 : 0, curve: 1.5 });
+                await sleep(3600);
+            }
+            if (tok !== tourTok) return;
+            S.touring = false; $('#btnTour').classList.remove('on');
+            if (ids.length) flyHome();
+        }
+
+        // =====================================================================
+        // 10. XUẤT DỮ LIỆU & BẢN ĐỒ
+        // =====================================================================
+        function exportCsv() {
+            const k = S.sortBy;
+            const ids = [...Array(N).keys()].filter(i => isFinite(CUR.V[k][i]))
+                .sort((a, b) => S.sortDir === 'desc' ? CUR.V[k][b] - CUR.V[k][a] : CUR.V[k][a] - CUR.V[k][b]);
+            const head = ['Hang', 'Ma_xa', 'Loai', 'Ten_phuong_xa', 'LST_C', 'NDVI', 'TVDI', 'Hang_LST', 'Hang_NDVI', 'Hang_TVDI', 'Thoa_nguong'];
+            const rows = ids.map((i, j) => [j + 1, META[i].ma_xa, META[i].loai, META[i].ten_xa, fmt('LST', CUR.V.LST[i]), fmt('NDVI', CUR.V.NDVI[i]), fmt('TVDI', CUR.V.TVDI[i]),
+            CUR.rank.LST.r[i], CUR.rank.NDVI.r[i], CUR.rank.TVDI.r[i], CUR.match[i] === 1 ? 'Co' : (CUR.match[i] === 0 ? 'Khong' : '')]);
+            const csv = '\ufeff' + [head, ...rows].map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+            const tag = CUR.c.type === 'period' ? `${S.from}_${S.to}` : (CUR.c.ym || CUR.c.year);
+            download(`XepHang_${k}_${tag}.csv`, csv, 'text/csv;charset=utf-8');
+            logAct('Xuất CSV xếp hạng'); toast('Đã xuất bảng xếp hạng CSV', 'ok');
+        }
+        function exportGeo() {
+            const num = (k, i) => isFinite(CUR.V[k][i]) ? +CUR.V[k][i].toFixed(CFG[k].dec) : null;
+            const feats = WARDS.features.filter((f, i) => !CUR.anyF || CUR.match[i] === 1).map(f => {
+                const i = f.properties.idx;
+                return { ...f, properties: { ...f.properties, LST: num('LST', i), NDVI: num('NDVI', i), TVDI: num('TVDI', i), thoi_gian: ctxLabel().replace(/<\/?b>/g, '') } };
+            });
+            download(`PhuongXa_${CUR.anyF ? 'thoa_nguong' : 'tat_ca'}.geojson`, JSON.stringify({ type: 'FeatureCollection', features: feats }), 'application/geo+json');
+            toast(`Đã xuất ${feats.length} phường/xã (GeoJSON)`, 'ok');
+        }
+
+        // Thành lập bản đồ: khung, lưới toạ độ, la bàn, tên, thang màu, thước tỉ lệ
+        async function exportMapPng() {
+            busy(true, 'Đang thành lập bản đồ…');
+            for (let t = 0; (TW.raf || map.isMoving()) && t < 60; t++) await sleep(50);   // chờ hiệu ứng chuyển màu/camera xong
+            await new Promise(r => { map.once('render', r); map.triggerRepaint(); });
+            const src = map.getCanvas(), dpr = src.width / src.clientWidth;
+            const W = src.clientWidth, H = src.clientHeight, M = 70, TOP = 92, BOT = 120;
+            const cv = document.createElement('canvas');
+            cv.width = (W + M * 2) * dpr; cv.height = (H + TOP + BOT) * dpr;
+            const g = cv.getContext('2d'); g.scale(dpr, dpr);
+            g.fillStyle = '#fff'; g.fillRect(0, 0, W + M * 2, H + TOP + BOT);
+            g.drawImage(src, M, TOP, W, H);
+            // khung đôi
+            g.strokeStyle = '#0f172a'; g.lineWidth = 2; g.strokeRect(M, TOP, W, H);
+            g.lineWidth = 1; g.strokeRect(M - 8, TOP - 8, W + 16, H + 16);
+            // tiêu đề
+            g.fillStyle = '#0f172a'; g.textAlign = 'center';
+            g.font = "800 22px 'Be Vietnam Pro', sans-serif";
+            g.fillText(`BẢN ĐỒ ${CFG[S.idx].title} TP. HỒ CHÍ MINH`, M + W / 2, 40);
+            g.font = "500 13px 'Be Vietnam Pro', sans-serif"; g.fillStyle = '#475569';
+            g.fillText(`${ctxLabel().replace(/<\/?b>/g, '')} · ${S.layer === 'pixel' ? 'ảnh pixel ~120 m' : 'trung bình theo phường/xã'}`, M + W / 2, 62);
+            // nhãn toạ độ trên khung
+            if (S.view === '2D') {
+                const { b, lngs, lats } = graticuleTicks();
+                g.font = "600 10px Consolas, monospace"; g.fillStyle = '#0f172a';
+                const cy = (b.getNorth() + b.getSouth()) / 2, cx = (b.getEast() + b.getWest()) / 2;
+                for (const x of lngs) {
+                    const px = map.project([x, cy]).x; if (px < 30 || px > W - 30) continue;
+                    g.textAlign = 'center'; g.fillText(dms(x, false), M + px, TOP - 13); g.fillText(dms(x, false), M + px, TOP + H + 22);
+                    g.fillRect(M + px - .5, TOP - 8, 1, 8); g.fillRect(M + px - .5, TOP + H, 1, 8);
+                }
+                for (const y of lats) {
+                    const py = map.project([cx, y]).y; if (py < 30 || py > H - 30) continue;
+                    g.fillRect(M - 8, TOP + py - .5, 8, 1); g.fillRect(M + W, TOP + py - .5, 8, 1);
+                    g.save(); g.translate(M - 13, TOP + py); g.rotate(-Math.PI / 2); g.textAlign = 'center'; g.fillText(dms(y, true), 0, 0); g.restore();
+                    g.save(); g.translate(M + W + 13, TOP + py); g.rotate(Math.PI / 2); g.textAlign = 'center'; g.fillText(dms(y, true), 0, 0); g.restore();
+                }
+            }
+            // la bàn
+            const nx = M + W - 40, ny = TOP + 22;
+            g.save(); g.translate(nx, ny + 22); g.rotate(-map.getBearing() * Math.PI / 180);
+            g.fillStyle = '#fff'; g.strokeStyle = '#0f172a'; g.lineWidth = 1.4;
+            g.beginPath(); g.moveTo(0, -20); g.lineTo(10, 16); g.lineTo(0, 9); g.lineTo(-10, 16); g.closePath(); g.fill(); g.stroke();
+            g.fillStyle = '#0f172a'; g.beginPath(); g.moveTo(0, -20); g.lineTo(0, 9); g.lineTo(-10, 16); g.closePath(); g.fill();
+            g.font = "800 14px 'Be Vietnam Pro', sans-serif"; g.textAlign = 'center'; g.fillText('N', 0, -25);
+            g.restore();
+            // thang màu
+            const lx = M, ly = TOP + H + 44, lw = Math.min(380, W * 0.5), c = CFG[S.idx];
+            g.textAlign = 'left'; g.fillStyle = '#0f172a'; g.font = "700 12px 'Be Vietnam Pro', sans-serif";
+            g.fillText(`${S.idx}${c.unit ? ' (' + c.unit + ')' : ''} – ${c.desc}`, lx, ly - 6);
+            const grd = g.createLinearGradient(lx, 0, lx + lw, 0);
+            c.palette.forEach((p, j) => grd.addColorStop(j / (c.palette.length - 1), p));
+            g.fillStyle = grd; g.fillRect(lx, ly, lw, 14); g.strokeStyle = '#334155'; g.strokeRect(lx, ly, lw, 14);
+            g.font = "600 10px Consolas, monospace"; g.fillStyle = '#0f172a'; g.textAlign = 'center';
+            for (const v of niceTicks(c.min, c.max)) { const tx = lx + lw * (v - c.min) / (c.max - c.min); g.fillText(String(+v.toFixed(2)), tx, ly + 27); g.fillRect(tx - .5, ly + 14, 1, 4); }
+            g.textAlign = 'left'; g.fillStyle = '#64748b'; g.font = "500 10px 'Be Vietnam Pro', sans-serif";
+            g.fillText(`◀ ${c.lowTxt}`, lx, ly + 42); g.textAlign = 'right'; g.fillText(`${c.highTxt} ▶`, lx + lw, ly + 42);
+            // thước tỉ lệ
+            const lat = map.getCenter().lat, mpp = 40075016.686 * Math.cos(lat * Math.PI / 180) / (512 * 2 ** map.getZoom());
+            const target = 150 * mpp, pow = 10 ** Math.floor(Math.log10(target)), nice = [1, 2, 5, 10].map(x => x * pow).filter(x => x <= target).pop() || pow;
+            const sw = nice / mpp, sx = M + W - sw - 10, sy = TOP + H + 50;
+            g.fillStyle = '#0f172a'; g.fillRect(sx, sy, sw / 2, 6); g.strokeStyle = '#0f172a'; g.strokeRect(sx, sy, sw, 6);
+            g.font = "600 10px Consolas, monospace"; g.textAlign = 'center';
+            g.fillText('0', sx, sy + 20); g.fillText(nice >= 1000 ? `${nice / 1000} km` : `${nice} m`, sx + sw, sy + 20);
+            if (S.view === '2D') g.fillText(`Tỉ lệ ≈ 1:${fmtInt(mpp * 96 / 0.0254)}`, sx + sw / 2, sy - 8);
+            // chú thích nguồn
+            g.textAlign = 'left'; g.fillStyle = '#64748b'; g.font = "500 10px 'Be Vietnam Pro', sans-serif";
+            g.fillText(`Nguồn: Landsat (Google Earth Engine) · Ranh giới 168 phường/xã TP.HCM · Hệ toạ độ WGS 84 (EPSG:4326) · Nhóm TK13 · ${new Date().toLocaleDateString('vi-VN')}`, M, TOP + H + BOT - 12);
+            busy(false);
+            cv.toBlob(b => { download(`BanDo_${S.idx}_${(CUR.c.ym || CUR.c.year || S.from + '_' + S.to)}.png`, b); toast('Đã xuất bản đồ PNG', 'ok'); }, 'image/png');
+            logAct('Xuất bản đồ PNG');
+        }
+
+        // =====================================================================
+        // 11. BẢNG QUẢN TRỊ (chỉ admin)
+        // =====================================================================
+        function openAdmin(p = 'data') {
+            if (!requireAdmin('mở bảng quản trị')) return;
+            $('#adminModal').hidden = false;
+            showAdminPage(p);
+        }
+        function showAdminPage(p) {
+            if (!isAdmin()) return;
+            $$('#admNav button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+            const el = $('#admMain');
+            const pages = { data: admData, tool: admTool, style: admStyle, users: admUsers, log: admLog, sys: admSys };
+            el.innerHTML = pages[p]();
+            el.firstElementChild?.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 350, easing: 'ease-out' });
+            bindAdmin(p);
+        }
+
+        function admData() {
+            const rows = IDX.map(k => { const ms = DATA.indices[k].months; return `<tr><td><b class="tag ${k}">${k}</b></td><td>${ms.length}</td><td>${ms.length ? ymLabel(ms[0]) : '–'}</td><td>${ms.length ? ymLabel(ms[ms.length - 1]) : '–'}</td><td>${Object.keys(DATA.indices[k].files || {}).length}</td></tr>`; }).join('');
+            return `<div><h3>Dữ liệu &amp; Google Earth Engine</h3><p class="d">Chỉ quản trị viên được nạp / cập nhật dữ liệu. Người dùng thường chỉ xem kết quả.</p>
+                <div class="box"><h5><i class="fa-solid fa-database" style="color:#2563eb"></i> Dữ liệu đang dùng</h5>
+                    <table class="tbl"><tr><th>Chỉ số</th><th>Số ảnh tháng</th><th>Từ</th><th>Đến</th><th>Ảnh pixel</th></tr>${rows}</table>
+                    <p style="font-size:11.5px;color:var(--muted);margin:8px 0 0">Tạo lúc: <b>${esc(DATA.generated || '–')}</b> · Thư mục nguồn: <code class="k">${esc(DATA.source || '–')}</code> · ${N} phường/xã</p></div>
+                <div class="box"><h5><i class="fa-solid fa-satellite-dish" style="color:#7c3aed"></i> Cập nhật dữ liệu từ ảnh GEE (GeoTIFF)</h5>
+                    <ol style="margin:0 0 8px;padding-left:18px;font-size:12px;line-height:1.7">
+                        <li>Xuất ảnh tháng từ GEE (Export.image.toDrive) với tên <code class="k">LST_HCMC_YYYY_MM.tif</code>, <code class="k">NDVI_HCMC_YYYY_MM.tif</code>, <code class="k">TDVI_HCMC_YYYY_MM.tif</code>.</li>
+                        <li>Tải về và giải nén vào một thư mục (vd. <code class="k">D:/data tiff</code>).</li>
+                        <li>Chạy máy chủ xử lý <code class="k">python Remote_Sensing_Tool/app.py</code> rồi bấm nút bên dưới — hoặc tự chạy <code class="k">python tao_du_lieu_webgis.py --input "D:/data tiff"</code>.</li>
+                    </ol>
+                    <div class="field-row" style="margin-bottom:8px"><div><span class="lbl">Thư mục ảnh GeoTIFF</span><input class="inp" id="admInput" value="${esc(DATA.source || 'D:/data tiff')}"></div>
+                        <div><span class="lbl">Mã quản trị máy chủ (in ra khi chạy app.py)</span><input class="inp" id="admToken" type="password" value="${esc(localStorage.getItem('webgis_srv_token') || '')}"></div></div>
+                    <button class="btn primary" id="admRebuild"><i class="fa-solid fa-gears"></i> Xử lý lại dữ liệu</button>
+                    <pre class="log" id="admRebuildLog" hidden></pre></div>
+                <div class="box"><h5><i class="fa-solid fa-rotate" style="color:#059669"></i> Nạp lại / thay thế dữ liệu</h5>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button class="btn" id="admReload"><i class="fa-solid fa-rotate-right"></i> Tải lại từ máy chủ</button>
+                        <label class="btn"><i class="fa-solid fa-file-import"></i> Nạp file du_lieu_phuong.json<input type="file" id="admJson" accept=".json" hidden></label>
+                    </div></div></div>`;
+        }
+        function admTool() {
+            return `<div><h3>Xử lý &amp; tính toán từ file ảnh</h3><p class="d">Tải ảnh .tif nhiều kênh (Red, NIR, Thermal) lên máy chủ Flask để tính NDVI, LST, TVDI và xuất Excel. Cần chạy <code class="k">python Remote_Sensing_Tool/app.py</code> (cổng 5000).</p>
+                <div class="box"><input type="file" id="imageFile" accept=".tif,.tiff" class="inp">
+                    <button class="btn primary" id="submitBtn" style="margin-top:10px"><i class="fa-solid fa-file-excel"></i> Xuất kết quả Excel</button>
+                    <div id="uploadStatus" style="margin-top:8px;font-size:12px;font-weight:600"></div></div></div>`;
+        }
+        function admStyle() {
+            return `<div><h3>Thang màu &amp; dải giá trị</h3><p class="d">Mặc định theo thang màu GEE (LST 25–45 °C, NDVI −0.2–1). Thay đổi được lưu trên trình duyệt này.</p>
+                ${IDX.map(k => `<div class="box"><h5><span class="tag ${k}">${k}</span> ${CFG[k].desc}</h5>
+                    <div class="field-row"><div><span class="lbl">Giá trị nhỏ nhất</span><input class="inp" type="number" step="0.01" data-f="min" data-k="${k}" value="${CFG[k].min}"></div>
+                    <div><span class="lbl">Giá trị lớn nhất</span><input class="inp" type="number" step="0.01" data-f="max" data-k="${k}" value="${CFG[k].max}"></div></div>
+                    <span class="lbl" style="margin-top:8px">Bảng màu (palette, mã HEX cách nhau dấu phẩy)</span>
+                    <textarea class="inp" rows="2" data-f="palette" data-k="${k}">${CFG[k].palette.map(p => `"${p}"`).join(', ')}</textarea>
+                    <div class="pal-prev" data-prev="${k}" style="background:${gradientCss(k)}"></div></div>`).join('')}
+                <div style="display:flex;gap:8px"><button class="btn primary" id="admSaveStyle"><i class="fa-solid fa-floppy-disk"></i> Lưu &amp; áp dụng</button><button class="btn" id="admResetStyle"><i class="fa-solid fa-arrow-rotate-left"></i> Khôi phục mặc định</button></div></div>`;
+        }
+        function admUsers() {
+            const us = getUsers();
+            return `<div><h3>Quản lý tài khoản</h3><p class="d">Quản trị viên: toàn quyền. Người dùng: chỉ xem bản đồ, xếp hạng, thống kê, xuất báo cáo.</p>
+                <div class="box"><table class="tbl"><tr><th>Tài khoản</th><th>Họ tên</th><th>Vai trò</th><th style="text-align:right">Thao tác</th></tr>
+                ${us.map(x => `<tr><td><b>${esc(x.u)}</b></td><td>${esc(x.name)}</td><td><span class="badge ${x.role}">${x.role === 'admin' ? 'Quản trị' : 'Người dùng'}</span></td>
+                    <td style="text-align:right"><button class="btn" data-pw="${esc(x.u)}"><i class="fa-solid fa-key"></i></button> <button class="btn danger" data-del="${esc(x.u)}" ${x.u === USER.u ? 'disabled' : ''}><i class="fa-solid fa-trash"></i></button></td></tr>`).join('')}</table></div>
+                <div class="box"><h5><i class="fa-solid fa-user-plus" style="color:#2563eb"></i> Thêm tài khoản</h5>
+                    <div class="field-row"><input class="inp" id="nuU" placeholder="Tên đăng nhập"><input class="inp" id="nuN" placeholder="Họ tên"></div>
+                    <div class="field-row" style="margin-top:8px"><input class="inp" id="nuP" type="password" placeholder="Mật khẩu (≥ 6 ký tự)"><select class="inp" id="nuR"><option value="user">Người dùng (chỉ xem)</option><option value="admin">Quản trị viên</option></select></div>
+                    <button class="btn primary" id="nuAdd" style="margin-top:10px"><i class="fa-solid fa-plus"></i> Thêm</button>
+                    <div id="pwBox"></div></div></div>`;
+        }
+        function admLog() {
+            let l = []; try { l = JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch (e) { }
+            return `<div><h3>Nhật ký hoạt động</h3><p class="d">300 thao tác gần nhất trên trình duyệt này.</p>
+                <div class="box"><table class="tbl"><tr><th>Thời gian</th><th>Tài khoản</th><th>Thao tác</th></tr>
+                ${l.map(x => `<tr><td class="mono">${new Date(x.t).toLocaleString('vi-VN')}</td><td>${esc(x.u)}</td><td>${esc(x.a)}</td></tr>`).join('') || '<tr><td colspan="3">Chưa có</td></tr>'}</table></div>
+                <button class="btn danger" id="admClearLog"><i class="fa-solid fa-broom"></i> Xoá nhật ký</button></div>`;
+        }
+        function admSys() {
+            const gl = map.painter?.context?.gl;
+            return `<div><h3>Thông tin hệ thống</h3><p class="d">Siêu dữ liệu và hiệu năng thực đo của phiên làm việc.</p>
+                <div class="box"><table class="tbl">
+                    <tr><td>Định dạng nguồn</td><td class="mono">GeoTIFF float32, LZW, khối 256×256 (COG-ready)</td></tr>
+                    <tr><td>Hệ toạ độ ảnh gốc</td><td class="mono">EPSG:32648 (WGS 84 / UTM 48N), 30 m</td></tr>
+                    <tr><td>Ảnh hiển thị web</td><td class="mono">PNG 8-bit, EPSG:3857, ${DATA.overlay ? DATA.overlay.width + '×' + DATA.overlay.height : '–'} px (~120 m)</td></tr>
+                    <tr><td>Hệ toạ độ hiển thị</td><td class="mono">EPSG:4326 (WGS 84) / Web Mercator</td></tr>
+                    <tr><td>Thời gian tải dữ liệu</td><td class="mono">${PERF.loadMs.toFixed(0)} ms (${(PERF.bytes / 1048576).toFixed(2)} MB)</td></tr>
+                    <tr><td>Bộ đệm ảnh pixel</td><td class="mono">${imgCache.size} ảnh giải mã, ${pxCache.size} ảnh tổng hợp</td></tr>
+                    <tr><td>Thư viện</td><td class="mono">MapLibre GL ${maplibregl.getVersion ? maplibregl.getVersion() : ''} · Chart.js ${Chart.version}</td></tr>
+                    <tr><td>WebGL</td><td class="mono">${gl ? (gl instanceof WebGL2RenderingContext ? 'WebGL 2' : 'WebGL 1') : '–'}</td></tr>
+                </table></div></div>`;
+        }
+
+        function bindAdmin(p) {
+            if (p === 'data') {
+                $('#admReload').onclick = async () => {
+                    if (!requireAdmin('tải lại dữ liệu')) return;
+                    try { PERF.bytes = 0; await loadAllData(); map.getSource('wards').setData(WARDS); buildFrames(true); refresh({ wave: true, dur: 900 }); toast('Đã tải lại dữ liệu', 'ok'); logAct('Tải lại dữ liệu'); showAdminPage('data'); }
+                    catch (e) { toast('Lỗi tải dữ liệu: ' + e.message, 'err'); }
+                };
+                $('#admJson').onchange = async e => {
+                    if (!requireAdmin('nạp dữ liệu')) return;
+                    const f = e.target.files[0]; if (!f) return;
+                    try { applyData(JSON.parse(await f.text()), null); buildFrames(true); refresh({ wave: true, dur: 900 }); toast(`Đã nạp ${esc(f.name)}`, 'ok'); logAct('Nạp file dữ liệu ' + f.name); showAdminPage('data'); }
+                    catch (err) { toast('File không hợp lệ: ' + err.message, 'err'); }
+                };
+                $('#admRebuild').onclick = async () => {
+                    if (!requireAdmin('xử lý dữ liệu GEE')) return;
+                    const btn = $('#admRebuild'), log = $('#admRebuildLog');
+                    btn.disabled = true; log.hidden = false; log.textContent = 'Đang xử lý toàn bộ ảnh… (có thể mất vài phút)';
+                    try {
+                        localStorage.setItem('webgis_srv_token', $('#admToken').value);
+                        const r = await fetch('http://127.0.0.1:5000/rebuild-data', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': $('#admToken').value }, body: JSON.stringify({ input: $('#admInput').value }) });
+                        const j = await r.json();
+                        log.textContent = j.log || j.error || '';
+                        if (!r.ok) throw new Error(j.error || 'Xử lý thất bại');
+                        logAct('Xử lý lại dữ liệu từ ' + $('#admInput').value);
+                        $('#admReload').click();
+                    } catch (e) { log.textContent += '\n\nLỗi: ' + e.message + '\n→ Kiểm tra đã chạy "python Remote_Sensing_Tool/app.py" chưa.'; toast('Không xử lý được dữ liệu', 'err'); }
+                    finally { btn.disabled = false; }
+                };
+            }
+            if (p === 'tool') $('#submitBtn').onclick = calculateIndices;
+            if (p === 'style') {
+                $$('#admMain textarea[data-k]').forEach(t => t.oninput = () => {
+                    const pal = (t.value.match(/#[0-9a-fA-F]{3,6}\b/g) || []);
+                    if (pal.length >= 2) $(`#admMain [data-prev="${t.dataset.k}"]`).style.background = `linear-gradient(to right, ${pal.join(',')})`;
+                });
+                $('#admSaveStyle').onclick = () => {
+                    if (!requireAdmin('đổi thang màu')) return;
+                    const save = {};
+                    for (const k of IDX) {
+                        const mn = parseFloat($(`#admMain [data-k="${k}"][data-f="min"]`).value), mx = parseFloat($(`#admMain [data-k="${k}"][data-f="max"]`).value);
+                        const pal = ($(`#admMain textarea[data-k="${k}"]`).value.match(/#[0-9a-fA-F]{3,6}\b/g) || []);
+                        if (!(mx > mn) || pal.length < 2) { toast(`${k}: dải giá trị hoặc bảng màu không hợp lệ`, 'err'); return; }
+                        save[k] = { min: mn, max: mx, palette: pal };
+                    }
+                    localStorage.setItem(CFG_KEY, JSON.stringify(save));
+                    CFG = loadCfg(); rebuildPalettes(); refresh({ dur: 700 }); toast('Đã áp dụng thang màu mới', 'ok'); logAct('Đổi thang màu');
+                };
+                $('#admResetStyle').onclick = () => { localStorage.removeItem(CFG_KEY); CFG = loadCfg(); rebuildPalettes(); refresh({ dur: 700 }); showAdminPage('style'); toast('Đã khôi phục thang màu mặc định', 'ok'); logAct('Khôi phục thang màu'); };
+            }
+            if (p === 'users') {
+                $('#nuAdd').onclick = () => {
+                    if (!requireAdmin('thêm tài khoản')) return;
+                    const u = $('#nuU').value.trim(), n = $('#nuN').value.trim() || u, pw = $('#nuP').value, r = $('#nuR').value;
+                    if (!/^[a-zA-Z0-9_.-]{3,30}$/.test(u)) return toast('Tên đăng nhập 3–30 ký tự, không dấu', 'err');
+                    if (pw.length < 6) return toast('Mật khẩu tối thiểu 6 ký tự', 'err');
+                    const us = getUsers(); if (us.some(x => x.u === u)) return toast('Tài khoản đã tồn tại', 'err');
+                    us.push({ u, name: n, role: r, h: hashPw(u, pw) }); saveUsers(us); logAct(`Thêm tài khoản ${u} (${r})`); toast('Đã thêm tài khoản', 'ok'); showAdminPage('users');
+                };
+                $$('#admMain [data-del]').forEach(b => b.onclick = () => {
+                    const u = b.dataset.del;
+                    if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.innerHTML = 'Xác nhận xoá?'; setTimeout(() => { b.dataset.confirm = ''; b.innerHTML = '<i class="fa-solid fa-trash"></i>'; }, 3000); return; }
+                    const us = getUsers().filter(x => x.u !== u);
+                    if (!us.some(x => x.role === 'admin')) return toast('Phải còn ít nhất 1 quản trị viên', 'err');
+                    saveUsers(us); logAct('Xoá tài khoản ' + u); toast('Đã xoá ' + u, 'ok'); showAdminPage('users');
+                });
+                $$('#admMain [data-pw]').forEach(b => b.onclick = () => {
+                    const u = b.dataset.pw;
+                    $('#pwBox').innerHTML = `<div style="display:flex;gap:8px;margin-top:12px"><input class="inp" id="pwNew" type="password" placeholder="Mật khẩu mới cho ${esc(u)}"><button class="btn primary" id="pwSave">Đổi</button></div>`;
+                    $('#pwNew').focus();
+                    $('#pwSave').onclick = () => {
+                        const pw = $('#pwNew').value; if (pw.length < 6) return toast('Mật khẩu tối thiểu 6 ký tự', 'err');
+                        const us = getUsers(); const x = us.find(y => y.u === u); x.h = hashPw(u, pw); saveUsers(us); logAct('Đổi mật khẩu ' + u); toast('Đã đổi mật khẩu ' + u, 'ok'); $('#pwBox').innerHTML = '';
+                    };
+                });
+            }
+            if (p === 'log') $('#admClearLog').onclick = () => { localStorage.removeItem(LOG_KEY); logAct('Xoá nhật ký'); showAdminPage('log'); };
+        }
+
+        // Tính toán & xuất Excel (backend Flask) — chỉ admin
+        async function calculateIndices() {
+            if (!requireAdmin('xử lý ảnh')) return;
+            const fileInput = $('#imageFile'), btn = $('#submitBtn'), st = $('#uploadStatus');
+            if (!fileInput.files.length) { st.textContent = 'Vui lòng chọn một file .tif trước!'; st.style.color = 'var(--bad)'; return; }
+            const fd = new FormData(); fd.append('file', fileInput.files[0]);
+            st.textContent = 'Đang xử lý, vui lòng chờ…'; st.style.color = 'var(--accent)'; btn.disabled = true;
+            try {
+                const r = await fetch('http://127.0.0.1:5000/calculate', { method: 'POST', body: fd });
+                if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || 'Có lỗi xảy ra khi xử lý file từ Server'); }
+                download('KetQua_ChiSoVienTham.xlsx', await r.blob());
+                st.textContent = 'Thành công! File Excel đã được tải xuống.'; st.style.color = 'var(--ok)'; logAct('Xử lý ảnh ' + fileInput.files[0].name);
+            } catch (e) { st.textContent = 'Lỗi: ' + e.message; st.style.color = 'var(--bad)'; }
+            finally { btn.disabled = false; }
+        }
+
+        // =====================================================================
+        // 12. GẮN SỰ KIỆN GIAO DIỆN
+        // =====================================================================
+        function bindUi() {
+            $$('#idxSeg button').forEach(b => b.onclick = () => setIndex(b.dataset.idx));
+            $$('#viewSeg button').forEach(b => b.onclick = () => setView(b.dataset.view));
+            $$('#layerSeg button').forEach(b => b.onclick = () => setLayer(b.dataset.layer));
+            $$('#modeSeg button').forEach(b => b.onclick = () => { stop(); setMode(b.dataset.mode); });
+            $$('#rTabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+            $('#baseSel').onchange = e => { S.basemap = e.target.value; addBasemap(S.basemap); };
+            $('#fromSel').onchange = onRangeChange; $('#toSel').onchange = onRangeChange;
+            $('#tlPlay').onclick = play;
+            $('#tlPrev').onclick = () => { stop(); gotoFrame(S.frameI - 1); };
+            $('#tlNext').onclick = () => { stop(); gotoFrame(S.frameI + 1); };
+            $('#tlRange').oninput = e => { stop(); gotoFrame(+e.target.value, 300); };
+            $('#speedSel').onchange = e => S.speed = +e.target.value;
+            $('#loopChk').onchange = e => S.loop = e.target.checked;
+            $('#onlyMatch').onchange = e => { S.onlyMatch = e.target.checked; renderRank(); };
+            $('#searchBox').oninput = e => { S.search = e.target.value; renderRank(); };
+            $$('#rankHead button').forEach(b => b.onclick = () => {
+                const s = b.dataset.sort;
+                if (S.sortBy === s) S.sortDir = S.sortDir === 'desc' ? 'asc' : 'desc';
+                else { S.sortBy = s; S.sortDir = CFG[s].order; }
+                renderRank();
+            });
+            $('#rankList').onclick = e => { const r = e.target.closest('.rank-row'); if (r) selectWard(+r.dataset.i); };
+            $('#rankList').onmouseover = e => {
+                const r = e.target.closest('.rank-row'); const i = r ? +r.dataset.i : null;
+                if (i === S.hover) return;
+                if (S.hover != null) map.setFeatureState({ source: 'wards', id: S.hover }, { hover: false });
+                if (i != null) map.setFeatureState({ source: 'wards', id: i }, { hover: true });
+                S.hover = i;
+            };
+            $('#rankList').onmouseleave = () => { if (S.hover != null) map.setFeatureState({ source: 'wards', id: S.hover }, { hover: false }); S.hover = null; };
+            $$('.presets .chip').forEach(c => c.onclick = () => {
+                const p = c.dataset.preset;
+                for (const k of IDX) S.filters[k].on = false;
+                if (p === 'hot') Object.assign(S.filters.LST, { on: true, op: '>', val: 40 });
+                if (p === 'bare') Object.assign(S.filters.NDVI, { on: true, op: '<', val: 0.2 });
+                if (p === 'dry') Object.assign(S.filters.TVDI, { on: true, op: '>', val: 0.4 });
+                buildThresholds(); refreshDebounced();
+            });
+            $('#btnCsv').onclick = exportCsv; $('#btnGeo').onclick = exportGeo;
+            $('#btnHome').onclick = () => flyHome();
+            $('#btnZoomIn').onclick = () => map.zoomIn(); $('#btnZoomOut').onclick = () => map.zoomOut();
+            $('#btnGrid').onclick = () => { S.grid = !S.grid; $('#btnGrid').classList.toggle('on', S.grid); $('#frame').style.opacity = S.grid ? '' : 0; drawGrid(); };
+            $('#btnExport').onclick = exportMapPng;
+            $('#btnTour').onclick = tour;
+            $('#north').onclick = () => map.easeTo({ bearing: 0, duration: 800 });
+            $('#toggleLeft').onclick = () => {
+                const L = $('#layout');
+                if (window.innerWidth <= 780) L.classList.toggle('show-left'); else L.classList.toggle('no-left');
+                $('#toggleLeft i').className = `fa-solid fa-chevron-${L.classList.contains('no-left') ? 'right' : 'left'}`;
+            };
+            $('#toggleRight').onclick = () => {
+                const L = $('#layout');
+                if (window.innerWidth <= 1100) L.classList.toggle('show-right'); else L.classList.toggle('no-right');
+                $('#toggleRight i').className = `fa-solid fa-chevron-${L.classList.contains('no-right') ? 'left' : 'right'}`;
+            };
+            $('#btnAdmin').onclick = () => openAdmin();
+            $('#admClose').onclick = () => $('#adminModal').hidden = true;
+            $('#adminModal').onclick = e => { if (e.target.id === 'adminModal') $('#adminModal').hidden = true; };
+            $$('#admNav button').forEach(b => b.onclick = () => showAdminPage(b.dataset.p));
+            $('#btnLogout').onclick = () => { logAct('Đăng xuất'); sessionStorage.removeItem(SESSION_KEY); location.reload(); };
+            new ResizeObserver(() => { map.resize(); scheduleGrid(); }).observe($('#mapwrap'));
+            document.addEventListener('keydown', e => {
+                if (!CUR || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+                if (e.code === 'Space') { e.preventDefault(); play(); }
+                else if (e.key === 'ArrowRight') { stop(); gotoFrame(S.frameI + 1); }
+                else if (e.key === 'ArrowLeft') { stop(); gotoFrame(S.frameI - 1); }
+                else if (e.key === 'Escape') { $('#adminModal').hidden = true; selectWard(null); }
+            });
+            setInterval(() => $('#liveClock').textContent = new Date().toLocaleTimeString('vi-VN'), 1000);
+        }
+
+        // =====================================================================
+        // 13. KHỞI ĐỘNG: splash -> đăng nhập -> hiệu ứng bay vào bản đồ
+        // =====================================================================
+        function splitTitle() {
+            // mỗi chữ cái một màu theo dải xanh -> tím -> hồng, hiện lần lượt
+            const h = $('#spTitle'), chars = [...h.textContent];
+            const stops = ['#1d4ed8', '#7c3aed', '#db2777'].map(hexToRgb);
+            h.innerHTML = chars.map((ch, i) => {
+                const t = i / Math.max(1, chars.length - 1) * 2, j = Math.min(1, Math.floor(t));
+                return `<span style="animation-delay:${i * 35}ms;color:${rgbStr(mix(stops[j], stops[j + 1], t - j).map(Math.round))}">${ch === ' ' ? '&nbsp;' : ch}</span>`;
+            }).join('');
+        }
+
+        function showLogin() {
+            return new Promise(resolve => {
+                const card = $('#loginCard');
+                card.hidden = false;
+                $('#lgUser').focus();
+                $$('#loginCard .demo button').forEach(b => b.onclick = () => { $('#lgUser').value = b.dataset.u; $('#lgPass').value = b.dataset.p; card.requestSubmit(); });
+                card.onsubmit = e => {
+                    e.preventDefault();
+                    const u = login($('#lgUser').value, $('#lgPass').value);
+                    if (!u) { $('#lgErr').textContent = 'Sai tên đăng nhập hoặc mật khẩu'; card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); return; }
+                    resolve(u);
+                };
+            });
+        }
+
+        async function enterApp() {
+            applyRole();
+            buildThresholds();
+            buildFrames(false);
+            computeAll();
+            renderLegend(); renderTitle(); renderRank(); renderTimelineNow(); renderResultChip(); renderRight();
+            document.body.classList.add('enter');
+            $('#splash').classList.add('out');
+            setTimeout(() => $('#splash').remove(), 1000);
+            // Bay từ toàn cảnh Việt Nam vào TP.HCM, các phường "đổ màu" lan dần
+            map.jumpTo({ center: [106.9, 12.4], zoom: 5.4, pitch: 0, bearing: 0 });
+            await sleep(350);
+            const cam = map.cameraForBounds(HOME_BOUNDS, { padding: { top: 90, bottom: 60, left: 40, right: 90 } });
+            map.flyTo({ ...cam, duration: 3000, curve: 1.5, essential: true });
+            setTimeout(() => { updateWardStyle(1200, true); updatePixels(); }, 1300);
+            toast(`Xin chào ${esc(USER.name)}! ${isAdmin() ? 'Bạn có toàn quyền quản trị.' : 'Bạn đang ở chế độ chỉ xem & thống kê.'}`, 'ok', 4200);
+        }
+
+        async function boot() {
+            splitTitle();
+            initUsers();
+            bindUi();
+            setProgress(5, 'Đang khởi động bản đồ…');
+            try {
+                await Promise.all([loadAllData(), mapLoaded]);
+                setupLayers();
+                setProgress(100, 'Sẵn sàng!');
+            } catch (e) {
+                console.error(e);
+                setProgress(100, '');
+                $('#progBar').style.display = 'none';
+                $('#progText').innerHTML = `<div class="login" style="text-align:left"><h3 style="color:var(--bad)"><i class="fa-solid fa-triangle-exclamation"></i> Không tải được dữ liệu</h3>
+                    <p class="s">${esc(e.message)}</p><ol style="font-size:12px;line-height:1.7;padding-left:18px;margin:0">
+                    <li>Mở web qua máy chủ: chạy <b>chay_webgis.bat</b> rồi vào <b>http://localhost:8081/webgis_v2.html</b> (không mở trực tiếp file).</li>
+                    <li>Nếu chưa có thư mục <b>data/</b>: chạy <b>python tao_du_lieu_webgis.py --input "D:/data tiff"</b>.</li></ol></div>`;
+                return;
+            }
+            USER = restoreSession();
+            if (!USER) { await sleep(300); $('#progBar').style.display = 'none'; $('#progText').style.display = 'none'; USER = await showLogin(); }
+            else await sleep(500);
+            enterApp();
+        }
+        boot();
     </script>
 </body>
+
 </html>

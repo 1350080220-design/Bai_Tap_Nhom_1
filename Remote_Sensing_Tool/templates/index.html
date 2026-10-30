@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tính toán chỉ số viễn thám</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 50px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        h2 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+            color: #d9534f;
+        }
+        .success {
+            color: #5cb85c !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Tính Toán Chỉ Số (NDVI, LST, TVDI)</h2>
+    <div class="form-group">
+        <label for="imageFile">Chọn ảnh vệ tinh (.tif):</label>
+        <br><br>
+        <input type="file" id="imageFile" accept=".tif">
+    </div>
+    <button id="submitBtn" onclick="calculateIndices()">Tính toán & Xuất Excel</button>
+    <div id="status"></div>
+</div>
+
+<script>
+    async function calculateIndices() {
+        const fileInput = document.getElementById('imageFile');
+        const submitBtn = document.getElementById('submitBtn');
+        const statusDiv = document.getElementById('status');
+        
+        if (fileInput.files.length === 0) {
+            statusDiv.textContent = 'Vui lòng chọn một file .tif trước!';
+            statusDiv.className = '';
+            return;
+        }
+
+        const file = fileInput.files[0];
+        
+        // Sử dụng FormData để gửi file
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Hiển thị trạng thái đang xử lý
+        statusDiv.textContent = 'Đang xử lý, vui lòng chờ...';
+        statusDiv.className = '';
+        submitBtn.disabled = true;
+
+        try {
+            // Gửi request lên Backend (API endpoint: /calculate)
+            const response = await fetch('/calculate', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                // Parse error message từ JSON nếu có lỗi
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Có lỗi xảy ra khi xử lý file');
+            }
+
+            // Xử lý response định dạng Blob (file Excel)
+            const blob = await response.blob();
+            
+            // Đặt tên file sẽ tải về
+            const fileName = 'KetQua_ChiSoVienTham.xlsx';
+            
+            // Tự động tạo thẻ <a> ẩn để tải file xuống
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = fileName;
+            
+            document.body.appendChild(a);
+            a.click();
+            
+            // Dọn dẹp object URL sau khi tải
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            statusDiv.textContent = 'Thành công! File Excel đã được tải xuống.';
+            statusDiv.className = 'success';
+        } catch (error) {
+            statusDiv.textContent = 'Lỗi: ' + error.message;
+            statusDiv.className = '';
+        } finally {
+            // Khôi phục nút
+            submitBtn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>

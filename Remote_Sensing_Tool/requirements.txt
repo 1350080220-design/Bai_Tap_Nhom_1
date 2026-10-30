@@ -1,0 +1,6 @@
+Flask
+numpy
+pandas
+rasterio
+openpyxl
+werkzeug
